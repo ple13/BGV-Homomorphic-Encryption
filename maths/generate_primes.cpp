@@ -112,7 +112,7 @@ int main() {
 
   auto halfq = (q >> 1);
   cout << "q/2: " << halfq << endl;
-  cout << std::hex << halfq % (ZZ(1) << 64) << endl;
+  cout << hex << halfq % (ZZ(1) << 64) << endl;
   halfq = (halfq >> 64);
   cout << hex << halfq % (ZZ(1) << 64) << endl;
   halfq = (halfq >> 64);
