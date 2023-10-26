@@ -1,0 +1,25 @@
+Input size:                     2^20
+Number of buckets:              1000
+Max bin size (w):               1200
+MPC-in-the-head params (t = e):  330
+
+n = 4096 > 2(w + t + e). 
+
+
+--------------------------------------
+
+Input size:                     2^20
+Number of buckets:              2048
+Max bin size (w):                630
+MPC-in-the-head params (t = e):  240
+
+n = 4096 > 2(w + t + e) = 2220
+
+
+--------------------------------------
+
+RingLWE degree: N = 4096
+
+Primes:
+t: 17026560423622361089
+q: 71227801505819413206549406819168704169200812033

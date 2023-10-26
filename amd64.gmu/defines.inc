@@ -1,31 +1,7 @@
-/* The MIT License (MIT)
- *
- * Copyright (c) 2015 mehdi sotoodeh
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 /*
     Definitions for GNU assembler
     ABI: gcc
- */
+*/
 
 /* Restore these registers across calls: rsp, rbx, rbp, r12,r13,r14,r15 */
 
@@ -39,6 +15,7 @@
 .equ A0,      %r8
 .equ A1,      %r9
 .equ A2,      %r10
+.equ A3,      %r11
 
 /* 192-bit accumulator-B */
 .equ B0,      %r12
@@ -163,16 +140,16 @@
     pop     B2
 .endm
 
-.macro  LOADA addr
-    mov     16(\addr),A2
-    mov     8(\addr),A1
-    mov     (\addr),A0
-.endm
-
 .macro  STOREA addr
     mov     A2,16(\addr)
     mov     A1,8(\addr)
     mov     A0,(\addr)
+.endm
+
+.macro  LOADA addr
+    mov     16(\addr),A2
+    mov     8(\addr),A1
+    mov     (\addr),A0
 .endm
 
 .macro  LOADB addr
@@ -187,11 +164,41 @@
     mov     B0,(\addr)
 .endm
 
-/* _______________________________________________________________________
-//
-// Out:  Y += X
-// _______________________________________________________________________ */
+.macro PushA0
+    push    A0
+.endm
 
+.macro PopA0
+    pop     A0
+.endm
+
+.macro LOADB0 addr
+    mov     (\addr),B0
+.endm
+
+.macro PushB0
+    push    B0
+.endm
+
+.macro PopB0
+    pop     B0
+.endm
+
+.macro  STOREA0 addr
+    mov     A0,(\addr)
+.endm
+
+.macro LOADA0 addr
+    mov     (\addr),A0
+.endm
+
+.macro  STOREB0 addr
+    mov     B0,(\addr)
+.endm
+
+/* _______________________________________________________________________
+//Y += X
+// _______________________________________________________________________ */
 .macro  ADD3 y2,y1,y0, x2,x1,x0
     add     \x0, \y0
     adc     \x1, \y1
@@ -207,10 +214,8 @@
 .endm
 
 /* _______________________________________________________________________
-//
-// Out:  Y -= X
+Y -= X
 // _______________________________________________________________________ */
-
 .macro  SUB3 y2,y1,y0, x2,x1,x0
     sub     \x0, \y0
     sbb     \x1, \y1
@@ -221,14 +226,12 @@
     SUB3 A2,A1,A0, \x2,\x1,\x0
 .endm
 
-.macro  SUBB x3,x2,x1,x0
+.macro  SUBB x2,x1,x0
     SUB3 B2,B1,B0, \x2,\x1,\x0
 .endm
 
 /* _______________________________________________________________________
-// MULT(a,b)
-// IN:   a, b
-// Out:  ACH:ACL = a*b
+// ACH:ACL = a*b
 // _______________________________________________________________________ */
 .macro  MULT XX,YY
     mov     \XX,ACL
@@ -236,9 +239,7 @@
 .endm
 
 /* _______________________________________________________________________
-// MULSET(u,v,a,b)
-// IN:   a, b
-// Out:  u:v = a*b
+// u:v = a*b
 // _______________________________________________________________________ */
 .macro  MULSET u,v,a,b
     MULT    \a,\b
@@ -247,9 +248,7 @@
 .endm
 
 /* _______________________________________________________________________
-// MULADD (u,v,a,b)
-// IN:   a, b
-// Out:  u:v += a*b
+// u:v += a*b
 // _______________________________________________________________________ */
 .macro  MULADD u,v,a,b
     MULT    \a,\b
@@ -257,41 +256,9 @@
     adc     ACH,\u
 .endm
 
-/* _______________________________________________________________________
-//
-// IN:   a
-// Out:  ACH:ACL = a*a
-// _______________________________________________________________________ */
-.macro  SQR  a
-    mov     \a,ACL
-    mul     ACL
-.endm
 
 /* _______________________________________________________________________
-// SQRSET(u,v,a)
-// IN:   a
-// Out:  u:v = a*a
-// _______________________________________________________________________ */
-.macro  SQRSET u,v,a
-    SQR     \a
-    mov     ACL,\v
-    mov     ACH,\u
-.endm
-
-/* _______________________________________________________________________
-// SQRADD(u,v,a)
-// IN:   a
-// Out:  u:v += a*a
-// _______________________________________________________________________ */
-.macro  SQRADD u,v,a
-    SQR     \a
-    add     ACL,\v
-    adc     ACH,\u
-.endm
-
-/* _______________________________________________________________________
-// MULADD_W0(ZZ,YY,BB,XX)
-// Out:  CARRY:Z = b*X + Y
+// CARRY:Z = b*X + Y
 // _______________________________________________________________________ */
 
 .macro  MULADD_W0 ZZ,YY,BB,XX
@@ -302,40 +269,19 @@
 .endm
 
 /* _______________________________________________________________________
-// MULADD_W1(ZZ,YY,BB,XX)
-// Out: CARRY:Z = b*X + Y + CARRY
+// CARRY:Z = b*X + Y + CARRY
 //      ZF = set if no carry
 // _______________________________________________________________________ */
 
 .macro  MULADD_W1 ZZ,YY,BB,XX
-    mov     ACH,\ZZ
-    MULT    \XX,\BB
-    add     \YY,ACL
-    adc     $0,ACH
-    add     ACL,\ZZ
-    adc     $0,ACH
+    mov     ACH,\ZZ     /* Z = CARRY                                       */
+    MULT    \XX,\BB     /* ACH:ACL = b*X                                   */
+    add     \YY,ACL     /* ACL = ACL + Y                                   */
+    adc     $0,ACH      /* ACH = ACH + CARRY                               */
+    add     ACL,\ZZ     /* Z = Z + ACL                                     */
+    adc     $0,ACH      /* ACH = ACH + CARRY                               */
 .endm
 
-/* _______________________________________________________________________
-// MULSET_W0(YY,BB,XX)
-// Out:  CARRY:Y = b*X
-// _______________________________________________________________________ */
 
-.macro  MULSET_W0 YY,BB,XX
-    MULT    \XX,\BB
-    mov     ACL,\YY
-.endm
 
-/* _______________________________________________________________________
-// MULSET_W1(YY,BB,XX)
-// Out: CARRY:Y = b*X + CARRY
-//      ZF = set if no carry
-// _______________________________________________________________________ */
-
-.macro  MULSET_W1 YY,BB,XX
-    mov     ACH,\YY
-    MULT    \XX,\BB
-    add     ACL,\YY
-    adc     $0,ACH
-.endm
 
