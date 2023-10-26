@@ -1,8 +1,9 @@
 # BGV-Homomorphic-Encryption
 
-# Compile asm code to object file
-as --64 --defsym GCC=1 -o [out].o [in].s
+# Compile asm code and build library
+cd amd64.gmu
+sh script.sh
 
-# Build library
-ar cr mylib.a [in].o
-
+# Run PSU protocol
+cd psu
+sh testPSU.sh
