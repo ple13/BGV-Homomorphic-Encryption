@@ -1,0 +1,85 @@
+// g++ -std=c++11 FindMaxBucketSize.cpp
+#include <cstdio>
+#include <stdint.h>
+#include <cstdlib>
+#include <vector>
+#include <iostream>
+#include <quadmath.h>
+#include <math.h>
+
+// Function to compute the upper bound probability that any bucket has at most t items.
+// n: num items.
+// m: num buckets.
+// t: prob a bucket has t balls.
+__float128 prob(int64_t n, int64_t m, int64_t t);
+
+// Find max bucket size with prob (1 - 2^sec)
+int findMaxBucketSize(int n, int nBuckets, int sec);
+
+std::vector<int> findCutAndChooseParams(int inputSize);
+
+int main() {
+  int n = 1048576;
+  int nBuckets = 1000;
+  int sec = 40;
+  std::cout << n << " " << nBuckets << " " << findMaxBucketSize(n, nBuckets, sec) << std::endl;
+  
+  n = 65536;
+  std::cout << n << " " << nBuckets << " " << findMaxBucketSize(n, nBuckets, sec) << std::endl;
+  
+  return 0;
+}
+
+std::vector<int> findCutAndChooseParams(int inputSize) {
+  if (inputSize == 1048576) {
+    return {700,162};
+  } else if (inputSize == 65536) {
+    return {82, 132};
+  } else if (inputSize == 1 << 24) {
+    return {8600, 745};
+  }
+  return {0, 0};
+}
+
+// Function to compute the upper bound probability that any bucket has at most t items.
+// n: num items.
+// m: num buckets.
+// t: prob a bucket has t balls.
+__float128 prob(int64_t n, int64_t m, int64_t t) {
+	// m = n/c
+	// Pr[X = t] = (n chooses t)*1/m^t*((m-1)/m)^(n-t) = m * n(n-1)...(n-t+1)/t! * 1/(m-1)^t * e^(-c)
+	// Pr[X = t] = e^(-c)* Prod_{i=0...(t-1)} (n-i)/((i+1)*(m-1))
+	
+	double c = (double)n/(double)m;
+	
+	__float128 d = exp(-c);
+	
+	__float128 prod = d; // prod = e^(-c)
+	
+	for(int64_t idx = 0; idx < t; idx++)
+	{
+		d *= ((__float128)(n-idx))/(((__float128)(idx + 1))*((__float128)(m-1)));
+	}
+	
+	return d;
+}
+
+// Find max bucket size with prob (1 - 2^sec)
+int findMaxBucketSize(int n, int nBuckets, int sec) {
+  int ret = (double)n/(double)nBuckets;
+  __float128 secureParam = pow(2.0, -sec);  
+  __float128 probability = (__float128)nBuckets*prob(n, nBuckets, ret);
+    
+  
+  for(int idx = ret; idx <= 2048; idx++) {
+    if(probability < secureParam){
+      std::cout << "ret: " << idx << std::endl;
+      break;
+    }
+    
+    __float128 scale = (__float128)(n - idx - 1)/(__float128)((idx + 2)*(nBuckets - 1));
+    probability *= scale;
+  }
+  
+  return 0;
+}
