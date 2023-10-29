@@ -102,9 +102,23 @@ vector<vector<uint64_t>> NoiseGenerator::GenerateFloodingNoiseVector(int size) {
   vector<vector<uint64_t>> ret(size, std::vector<uint64_t>(3));
   for (int i = 0; i < size; i++) {
     ret[i].resize(3, 0);
-    RAND_bytes((unsigned char *)ret[i].data(), 112/8);
+    RAND_bytes((unsigned char *)ret[i].data(), 128/8);
+    ret[i][1] >>= 16;
   }
   return ret;
+
+//   NTL::RR::SetPrecision(110);
+//   NTL::RR scale;
+//   NTL::MakeRR(scale, NTL::ZZ(1), 110);
+//   vector<vector<uint64_t>> ret(size, vector<uint64_t>(3));
+//   for (int i = 0; i < size; i++) {
+//     NTL::RR u = -2*NTL::log(NTL::random_RR());
+//     NTL::RR sqr_u = NTL::SqrRoot(u);
+//     NTL::RR v = sin(2*PI*NTL::random_RR());
+//     NTL::ZZ val = NTL::RoundToZZ(sqr_u*v*scale);
+//     ZZToU3(val, ret[i].data());
+//   }
+//   return ret;
 }
 
 vector<vector<uint64_t>> NoiseGenerator::GenerateUniformVector(int size) {
