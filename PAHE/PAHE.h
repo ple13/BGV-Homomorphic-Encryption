@@ -11,6 +11,8 @@
 #include "RandomGenerator.h"
 #include <NTL/ZZ.h>
 
+#define SEED_SIZE 16
+
 using namespace std;
 
 #define BYTES_PER_CIPHERTEXT_MODULUS 3
@@ -20,13 +22,21 @@ struct PublicKey {
   vector<vector<uint64_t>> b;
 };
   
-struct Ciphertext{
+struct Ciphertext {
   vector<vector<uint64_t>> a;
   vector<vector<uint64_t>> b;
-  Ciphertext() {}
-  Ciphertext(int n) {
+  Ciphertext(int n = 4096) {
     a.resize(n, vector<uint64_t>(3));
     b.resize(n, vector<uint64_t>(3));
+  }
+};
+
+struct CompactedCiphertext {
+  vector<vector<uint64_t>> a;
+  vector<unsigned char> b;
+  CompactedCiphertext(int n = 4096) {
+    a.resize(n, vector<uint64_t>(3));
+    b.resize(SEED_SIZE);
   }
 };
 
@@ -43,8 +53,11 @@ public:
   void init(int n = 4096, bool use_packing = true);
   void keygen();
   
-  Ciphertext encrypt_with_sk( vector<uint64_t>& pt);
-  Ciphertext encrypt_with_pk( vector<uint64_t>& pt);
+  Ciphertext encrypt_with_sk(vector<uint64_t>& pt);
+  Ciphertext encrypt_with_pk(vector<uint64_t>& pt);
+
+  CompactedCiphertext compact_encrypt_with_sk(vector<uint64_t>& pt);
+  Ciphertext toCiphertext(CompactedCiphertext compactedCiphertext);
   
   void EvalAdd(Ciphertext& ct1,  Ciphertext& ct2);
   void EvalAddPlain(Ciphertext& ct,  vector<uint64_t>& pt);

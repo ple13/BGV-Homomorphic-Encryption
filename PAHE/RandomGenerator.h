@@ -27,6 +27,7 @@ public:
   */
   vector<vector<uint64_t>> GenerateGaussianVector(int size);
   vector<vector<uint64_t>> GenerateUniformVector(int size);
+  vector<vector<uint64_t>> GenerateUniformVector(vector<unsigned char> seed, int size);
   vector<vector<uint64_t>> GenerateBinaryVector(int size);
   vector<vector<uint64_t>> GenerateZOVector(int size);
 private:

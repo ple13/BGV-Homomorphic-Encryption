@@ -1,4 +1,6 @@
 #include "RandomGenerator.h"
+#include "../crypto/prng.h"
+
 #include <openssl/rand.h>
 
 // Ciphertext sub modulo
@@ -86,6 +88,30 @@ vector<vector<uint64_t>> NoiseGenerator::GenerateUniformVector(int size) {
     ret[i].resize(3);
     RAND_bytes((unsigned char *)ret[i].data(), sizeof(uint64_t)*ret[i].size());
   }
+  return ret;
+}
+
+vector<vector<uint64_t>> NoiseGenerator::GenerateUniformVector(
+  std::vector<unsigned char> seed, int size) {
+  std::vector<unsigned char> IV(seed.data() + 16, seed.data() + seed.size());
+  std::vector<unsigned char> s(seed.data(), seed.data() + seed.size());
+
+  PRNG *prng = new PRNG((const unsigned char *)s.data(), (const unsigned char *)IV.data());
+  std::vector<unsigned char> str(size*sizeof(uint64_t)*3, 0);
+  prng->sampleBytes(str, str.size());
+
+
+  vector<vector<uint64_t>> ret(size, std::vector<uint64_t>(3));
+  uint64_t *ptr = (uint64_t *)str.data();
+  for (int i = 0; i < size; i++) {
+    ret[i].resize(3);
+    ret[i][0] = *ptr; ptr++;
+    ret[i][1] = *ptr; ptr++;
+    ret[i][2] = *ptr; ptr++;
+  }
+
+  delete prng;
+
   return ret;
 }
 

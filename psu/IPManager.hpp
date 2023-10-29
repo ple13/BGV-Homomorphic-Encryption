@@ -9,16 +9,14 @@
 #include <fstream>
 #include <iostream>
 #include <boost/algorithm/string.hpp>
+
 using namespace std;
 using namespace boost;
 
 class IPManager {
 public:
   int machines;
-  string A_Ip[100];
-  string B_Ip[100];
-  string C_Ip[100];
-  string D_Ip[100];
+
   string P_Ip[100][100];
 
   unordered_map <string, string> machineIps;
@@ -34,6 +32,7 @@ public:
     if( !file ) {
       cout << "Error opening input file" << endl ;
     }
+
     string line = "";
     while (file.peek() != EOF) {
       getline (file , line);
@@ -47,6 +46,7 @@ public:
       split(token, line, is_any_of(" "), token_compress_on);
       machineIps.emplace(token[0], token[1]);
     }
+
     for (int idx = 0; idx < 32; idx++) {
       getline(file, line);
       while (starts_with(line, "#")) {
@@ -54,6 +54,7 @@ public:
       }
       setIps(machines, line);
     }
+
     file.close();
   }
 
@@ -66,8 +67,11 @@ public:
         vector<string> tok;
         split(tok, next, is_any_of(" "), token_compress_on);
         if (tok.size() != (machines+1)) {
-          cout << "You have specified " << sizeof(tok)-1 << "  machines for " << name << " instead of " << machines << "\n";
+          cout << "You have specified " << sizeof(tok)-1 <<
+                  "  machines for " << name << " instead of " << machines <<
+                  "\n";
         }
+
         for (int i = 1; i < tok.size(); i++) {
           P_Ip[0][i-1] = machineIps[tok[i]];
         }

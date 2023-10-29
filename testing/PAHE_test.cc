@@ -1,5 +1,3 @@
-// g++ -O3 -ftree-vectorize -march=native -msse4.1 -mavx -o testPAHE testPAHE.cpp ../PAHE/RandomGenerator.cpp ../PAHE/PAHEHelper.cpp  ../PAHE/PAHE.cpp BGVTest.cpp -lssl -lntl -lgmp -lpthread -std=c++11 -lcrypto ../fastMod.a
-
 #include "../PAHE/PAHE.h"
 #include "BGVTest.h"
 #include <cassert>
@@ -41,8 +39,11 @@ int main() {
   }
   t.Tick("SHE with PK");
 
-  bgv.testMultiplePlainMult();
+  cout << "Running benchmark test" <<endl;
   bgv.benchmark();
+
+  bgv.compacted_ciphertext_to_ciphertext();
+  cout << "Compacted ciphertext to ciphertext....    PASSED" << endl;
 
   return 0;
 }

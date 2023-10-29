@@ -6,27 +6,23 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <string>
-#include "Network.hpp"
-#include "IPManager.hpp"
-
-// #ifdef UNIX_PLATFORM
-
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
+#include <errno.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/poll.h>
+#include <sys/socket.h>
 #include <sys/time.h>
-
+#include <sys/types.h>
 #include <NTL/ZZ.h>
+
 #include "../PAHE/PAHE.h"
+#include "Network.hpp"
+#include "IPManager.hpp"
 
 #define MAX_PACKAGE_SIZE 1073741824
 
@@ -36,19 +32,18 @@
 // #define DAVID 4
 
 using namespace std;
-// using namespace Utility;
 
 class Machine { 
 public:
-  int totalMachines;  // number of processor
-  int totalParties;   // number of parties 
+  int totalMachines; // number of processor
+  int totalParties;  // number of parties
   int machineId; 
   int party;
   int numberOfOutgoingParties;
   int numberOfIncomingParties;
   int numberOfOutgoingPeers;
   int numberOfIncomingPeers;
-  int layerBasePort; 	// solve the problem of parties trying to connect to processor in other layers
+  int layerBasePort; // solve the problem of parties trying to connect to processor in other layers
   
   vector <Network *> partiesDown;
   vector <Network *> partiesUp;
@@ -58,7 +53,7 @@ public:
   uint64_t num_bytes_send;
   uint64_t num_bytes_recv;
 
-  Machine (int totalMachines, int machineId, int party) {
+  Machine(int totalMachines, int machineId, int party) {
     cout << "Machine (int totalMachines, int machineId, int party)" << endl;
     this->totalMachines = totalMachines;
     this->totalParties = 2;
@@ -79,7 +74,7 @@ public:
     num_bytes_recv = 0;
   }
   
-  Machine (int totalParties, int totalMachines, int machineId, int party) {
+  Machine(int totalParties, int totalMachines, int machineId, int party) {
     cout << "Machine (int totalParties, int totalMachines, int machineId, int party)" << endl;
     this->totalMachines = totalMachines;
     this->totalParties = totalParties;
@@ -110,12 +105,10 @@ public:
 
   void connecting(int peerBasePort, int partyBasePort) {
     connectToOtherParties(partyBasePort, partiesDown, partiesUp, numberOfIncomingParties, numberOfOutgoingParties);
-//     cout << " all parties are connected!" << endl;
 
     usleep(1000);
 
     connectToOtherPeers(peerBasePort, peersDown, peersUp, numberOfIncomingPeers, numberOfOutgoingPeers);
-//     cout << " all peers are connected!" << endl;
   }
 
   void connectToOtherParties(int partyBasePort, vector <Network *> &partiesDown, vector <Network *> &partiesUp, int numberOfIncomingParties, int numberOfOutgoingParties) {
@@ -127,8 +120,6 @@ public:
     listeningServers(machineId, peerBasePort + party*layerBasePort + machineId, peersDown, numberOfIncomingPeers);
     connectingClients(machineId, peerBasePort + party*layerBasePort, peersUp, numberOfOutgoingPeers, false);
   }
-
-
 
   void listeningServers(int myId, int serverPort, vector <Network *> &DownList, int numberOfIncomingConnections) {
     int opt = 1, activity;
@@ -145,7 +136,6 @@ public:
     int server_fd, client_fd;
     if ((server_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) { perror("socket failed"); exit(1); }
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) { perror("setsockopt"); exit(1); } //| SO_REUSEPORT
-    // if ((ioctl(server_fd, FIONBIO, (char *)&opt)) < 0) { perror("socket nonblocking failed"); exit(1); }
     memset(&serverSocket, 0, sizeof(serverSocket));
     serverSocket.sin_family = AF_INET;
     serverSocket.sin_addr.s_addr = htonl(INADDR_ANY); // set our address to any interface
@@ -154,32 +144,29 @@ public:
     if (bind(server_fd, (struct sockaddr *)&serverSocket, sizeof(serverSocket)) < 0) { perror("error: bind"); exit(1); }
 
     if (listen(server_fd, 15) < 0) { perror("error: listen"); exit(1); }
-    // cout << "Listeting on port: " << serverPort << endl;
 
     FD_ZERO(&working_set); //clear the socket set 
     FD_SET(server_fd, &working_set); //add master socket to set
 
     for (int k = 0; k < numberOfIncomingConnections; k++) {
       while(1) {
-	activity = select(server_fd+1 , &working_set , NULL , NULL , NULL);   //&timeout
+        activity = select(server_fd+1 , &working_set , NULL , NULL , NULL);   //&timeout
 
-	if ((activity < 0) && (errno!=EINTR))  { perror("select failed"); exit(1); }
+        if ((activity < 0) && (errno!=EINTR))  { perror("select failed"); exit(1); }
 
-	if (FD_ISSET(server_fd, &working_set)) {
-	  if ((client_fd = accept(server_fd, (struct sockaddr *)&clientSock, &clientSocksize)) < 0) { perror("error: accept"); exit(1); }
-	  if (send(client_fd, msg, strlen(msg), 0) < 0) { perror("error: send"); exit(1); };
-	  Network * channel = new Network();
-	  channel->establishedChannel(client_fd);
-	
-	  int bytes_received = recv(client_fd, buffer ,sizeof(buffer) , 0);
-	  int machineIndex = ((int *)buffer)[0];
-	  // channel->recv_data(&index, 1);
-	  // cout << myId << " accepted connection from " << machineIndex << " stored in its DownList " << (machineIndex - myId - 1) << endl;
-	  machineIndex = (machineIndex - myId - 1);
-	  DownList[machineIndex] = channel;
-	  // DownList[machineIndex]->recv_data(&machineIndex, 1);
-	  break;
-	}
+        if (FD_ISSET(server_fd, &working_set)) {
+          if ((client_fd = accept(server_fd, (struct sockaddr *)&clientSock, &clientSocksize)) < 0) { perror("error: accept"); exit(1); }
+          if (send(client_fd, msg, strlen(msg), 0) < 0) { perror("error: send"); exit(1); };
+          Network * channel = new Network();
+          channel->establishedChannel(client_fd);
+
+          int bytes_received = recv(client_fd, buffer ,sizeof(buffer) , 0);
+          int machineIndex = ((int *)buffer)[0];
+
+          machineIndex = (machineIndex - myId - 1);
+          DownList[machineIndex] = channel;
+          break;
+        }
       }
     }
   }
@@ -193,9 +180,9 @@ public:
     char buffer[10];
     for (int i = 0; i < numberOfOutgoingConnections; i++) {
       if (partyFlag) {
-	serverIp = ipManager->P_Ip[i][machineId];
+        serverIp = ipManager->P_Ip[i][machineId];
       } else {
-	serverIp = ipManager->P_Ip[party][i];
+        serverIp = ipManager->P_Ip[party][i];
       }
       // cout << "Client: server " << i << " is at ip: " << serverIp << " port: " << serverPort + i << endl;			
       struct sockaddr_in serverSocket;
@@ -206,17 +193,17 @@ public:
       if ((client_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == 0) { perror("socket failed"); exit(1); }
 
       do {
-	usleep(1000);
-	if (connect(client_fd, (struct sockaddr *)&serverSocket, sizeof(serverSocket)) < 0) { perror("connection failed"); close(client_fd); exit(1); };
-	accepted_flag = read(client_fd, buffer, 10);
+        usleep(1000);
+        if (connect(client_fd, (struct sockaddr *)&serverSocket, sizeof(serverSocket)) < 0) {
+          perror("connection failed"); close(client_fd); exit(1);
+        }
+        accepted_flag = read(client_fd, buffer, 10);
       } while (accepted_flag < 0);
       
       Network * channel = new Network();
       channel->establishedChannel(client_fd);
       UpList[i] = channel;
-      // cout << myId << " requested to connect to " << i << " stored in its UpList " << i <<  endl;
       if (send(client_fd, &myId, sizeof(myId), 0) < 0) { perror("error: send"); exit(1); };
-      // UpList[i]->send_data(&myId, 1);
     }
   }
   
@@ -268,6 +255,39 @@ public:
       }
     }
     
+    return bytes;
+  }
+
+    void sendToParty(int src, int dest, CompactedCiphertext ciphertext) {
+    std::vector<uint64_t> buffer;
+    for (int i = 0; i < ciphertext.a.size(); i++) {
+      buffer.insert(buffer.end(), ciphertext.a[i].begin(), ciphertext.a[i].end());
+    }
+    buffer.insert(buffer.end(), ciphertext.b.begin(), ciphertext.b.end());
+
+    sendToParty(src, dest, (unsigned char *)buffer.data(), sizeof(uint64_t)*buffer.size());
+  }
+
+  int receiveFromParty(int dest, int src, CompactedCiphertext& ciphertext) {
+    int bytes = 0;
+    std::vector<unsigned char> buffer(4096*sizeof(uint64_t)*3 + 2*SEED_SIZE);
+    bytes += receiveFromParty(dest, src, buffer.data(), sizeof(uint64_t)*buffer.size());
+    uint64_t *ptr = (uint64_t *)buffer.data();
+    ciphertext.a.resize(4096, std::vector<uint64_t>(3));
+    ciphertext.b.resize(2*SEED_SIZE);
+
+    for (int i = 0; i < 4096; i++) {
+      for (int j = 0; j < 3; j++) {
+        ciphertext.a[i][j] = ptr[counter];
+        ptr++;
+      }
+    }
+
+    for (int i = 0; i < 2*SEED_SIZE) {
+        ciphertext.b[i] = buffer[4096*sizeof(uint64_t)*3 + i];
+      }
+    }
+
     return bytes;
   }
 

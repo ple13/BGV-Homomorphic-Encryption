@@ -7,6 +7,7 @@
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>
 #include <cassert>
+#include <openssl/rand.h>
 
 #include "PAHE.h"
 
@@ -119,6 +120,47 @@ Ciphertext BGV::encrypt_with_pk(vector<uint64_t>& pt) {
     asmAddModQ(c.b[i].data(), c.b[i].data(), e2[i].data());
   }
   
+  return c;
+}
+
+CompactedCiphertext BGV::compact_encrypt_with_sk(vector<uint64_t>& pt) {
+  CompactedCiphertext c(n);
+
+  std::vector<unsigned char> seed(2*SEED_SIZE);
+  RAND_bytes(seed.data(), seed.size());
+
+  c.b = seed;
+
+  // pt -> NTT(pt)
+  auto eval_pt = helper->ToEval(pt);
+
+  // Sample randomness (b) for ciphertext (-bs + te + m, b)
+  auto b = prng->GenerateUniformVector(seed, n);
+
+  vector<vector<uint64_t>> e = prng->GenerateGaussianVector(n);
+
+  // Compute te
+  for (int i = 0; i < n; i++) {
+    asmMulWithPModQ(e[i].data(), e[i].data());
+  }
+
+  // te -> NTT(te)
+  e = helper->ToEval(e);
+
+  // pk = (-bs + te, b)
+  for (int i = 0; i < n; i++) {
+    asmMulModQ(c.a[i].data(), b[i].data(), sk[i].data());
+    asmSubModQ(c.a[i].data(), e[i].data(), c.a[i].data());
+    asmAddModQ(c.a[i].data(), c.a[i].data(), eval_pt[i].data());
+  }
+
+  return c;
+}
+
+Ciphertext BGV::toCiphertext(CompactedCiphertext compactedCiphertext) {
+  Ciphertext c(n);
+  c.a = compactedCiphertext.a;
+  c.b = prng->GenerateUniformVector(compactedCiphertext.b, n);
   return c;
 }
 

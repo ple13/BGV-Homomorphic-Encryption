@@ -22,8 +22,8 @@ public:
   void testSHEwithPK();
   void testPolynomialEval();
   void testSHEPackedEncode();
-  void testMultiplePlainMult();
   void benchmark();
+  void compacted_ciphertext_to_ciphertext();
 
   BGV bgv;
 };

@@ -134,35 +134,6 @@ void BGVTest::testSHEwithPK() {
   }
 }
 
-void BGVTest::testMultiplePlainMult() {
-  vector<uint64_t> v1(bgv.n);
-  vector<uint64_t> v2(bgv.n);
-  for(int idx = 0; idx < bgv.n; idx++) {
-    v1[idx] = idx;
-    v2[idx] = idx + 1;
-  }
-
-  auto pt1 = bgv.helper->packed_encode(v1);
-  auto pt2 = bgv.helper->packed_encode(v2);
-
-  Ciphertext c1 = bgv.encrypt_with_pk(pt1);
-  auto c2_null  = bgv.helper->ToEval(pt2);
-  for (int i = 0; i < bgv.n; i++) {
-    asmMulModQ(c2_null[i].data(), c2_null[i].data(), c2_null[i].data());
-  }
-
-  bgv.EvalMultPlain(c1, c2_null);
-
-  vector<uint64_t> d = bgv.decrypt(c1);
-
-  d = bgv.helper->packed_decode(d);
-
-  for(int idx = 0; idx < bgv.n; idx++) {
-    std::cout << idx << std::endl;
-    assert((d[idx] % bgv.helper->plaintextModulus) == (v1[idx]*v2[idx]*v2[idx]));
-  }
-}
-
 void BGVTest::benchmark() {
   vector<uint64_t> v1(bgv.n);
   vector<uint64_t> v2(bgv.n);
@@ -212,4 +183,25 @@ void BGVTest::benchmark() {
     bgv.helper->packed_decode(d);
   }
   t.Tick("Decode");
+}
+
+void BGVTest::compacted_ciphertext_to_ciphertext() {
+   vector<uint64_t> v(bgv.n);
+
+  for(int idx = 0; idx < bgv.n; idx++) {
+    v[idx] = idx;
+  }
+
+  auto pt = bgv.helper->packed_encode(v);
+
+  CompactedCiphertext cc = bgv.compact_encrypt_with_sk(pt);
+  Ciphertext c = bgv.toCiphertext(cc);
+
+  vector<uint64_t> d = bgv.decrypt(c);
+
+  d = bgv.helper->packed_decode(d);
+
+  for(int idx = 0; idx < bgv.n; idx++) {
+    assert((d[idx] % bgv.helper->plaintextModulus) == v[idx]);
+  }
 }
