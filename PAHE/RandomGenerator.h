@@ -6,6 +6,7 @@
 #include <math.h>
 #include <random>
 #include <memory>
+#include <NTL/RR.h>
 
 using namespace std;
 
@@ -26,6 +27,7 @@ public:
   * @return          The vector of values within this Discrete Gaussian Distribution.
   */
   vector<vector<uint64_t>> GenerateGaussianVector(int size);
+  vector<vector<uint64_t>> GenerateFloodingNoiseVector(int size);
   vector<vector<uint64_t>> GenerateUniformVector(int size);
   vector<vector<uint64_t>> GenerateUniformVector(vector<unsigned char> seed, int size);
   vector<vector<uint64_t>> GenerateBinaryVector(int size);
@@ -43,6 +45,7 @@ private:
   * The standard deviation of the distribution.
   */
   double m_std;
+  NTL::RR PI;
 };
 
 #endif

@@ -220,6 +220,20 @@ public:
     }
     return bytes;
   }
+
+  void sendToParty(int src, int dest, std::vector<CompactedCiphertext> ciphertexts) {
+    for (int cdx = 0; cdx < ciphertexts.size(); cdx++) {
+      sendToParty(src, dest, ciphertexts[cdx]);
+    }
+  }
+
+  int receiveFromParty(int dest, int src, std::vector<CompactedCiphertext>& ciphertexts) {
+    int bytes = 0;
+    for (int cdx = 0; cdx < ciphertexts.size(); cdx++) {
+      bytes += receiveFromParty(dest, src, ciphertexts[cdx]);
+    }
+    return bytes;
+  }
   
   void sendToParty(int src, int dest, Ciphertext ciphertext) {
     std::vector<uint64_t> buffer;
@@ -235,7 +249,8 @@ public:
   int receiveFromParty(int dest, int src, Ciphertext& ciphertext) {
     int bytes = 0;
     std::vector<uint64_t> buffer(4096*2*3);
-    bytes += receiveFromParty(dest, src, (unsigned char *)buffer.data(), sizeof(uint64_t)*buffer.size());
+    bytes += receiveFromParty(dest, src, (unsigned char *)buffer.data(),
+                              sizeof(uint64_t)*buffer.size());
 
     ciphertext.a.resize(4096, std::vector<uint64_t>(3));
     ciphertext.b.resize(4096, std::vector<uint64_t>(3));
@@ -247,45 +262,45 @@ public:
         counter++;
       }
     }
-
     for (int i = 0; i < 4096; i++) {
       for (int j = 0; j < 3; j++) {
         ciphertext.b[i][j] = buffer[counter];
         counter++;
       }
     }
-    
     return bytes;
   }
 
-    void sendToParty(int src, int dest, CompactedCiphertext ciphertext) {
+  void sendToParty(int src, int dest, CompactedCiphertext ciphertext) {
     std::vector<uint64_t> buffer;
     for (int i = 0; i < ciphertext.a.size(); i++) {
       buffer.insert(buffer.end(), ciphertext.a[i].begin(), ciphertext.a[i].end());
     }
-    buffer.insert(buffer.end(), ciphertext.b.begin(), ciphertext.b.end());
-
+    uint64_t *ptr = (uint64_t *)ciphertext.b.data();
+    for (int i = 0; i < 2*SEED_SIZE/sizeof(uint64_t); i++) {
+      buffer.push_back(*ptr);
+      ptr++;
+    }
     sendToParty(src, dest, (unsigned char *)buffer.data(), sizeof(uint64_t)*buffer.size());
   }
 
   int receiveFromParty(int dest, int src, CompactedCiphertext& ciphertext) {
     int bytes = 0;
     std::vector<unsigned char> buffer(4096*sizeof(uint64_t)*3 + 2*SEED_SIZE);
-    bytes += receiveFromParty(dest, src, buffer.data(), sizeof(uint64_t)*buffer.size());
+    bytes += receiveFromParty(dest, src, buffer.data(), buffer.size());
     uint64_t *ptr = (uint64_t *)buffer.data();
     ciphertext.a.resize(4096, std::vector<uint64_t>(3));
     ciphertext.b.resize(2*SEED_SIZE);
 
     for (int i = 0; i < 4096; i++) {
       for (int j = 0; j < 3; j++) {
-        ciphertext.a[i][j] = ptr[counter];
+        ciphertext.a[i][j] = *ptr;
         ptr++;
       }
     }
 
-    for (int i = 0; i < 2*SEED_SIZE) {
-        ciphertext.b[i] = buffer[4096*sizeof(uint64_t)*3 + i];
-      }
+    for (int i = 0; i < 2*SEED_SIZE; i++) {
+      ciphertext.b[i] = buffer[4096*sizeof(uint64_t)*3 + i];
     }
 
     return bytes;
@@ -307,23 +322,23 @@ public:
     
     while(count < size) {
       if (count + MAX_PACKAGE_SIZE < size) {
-	bufferSize = MAX_PACKAGE_SIZE;
+        bufferSize = MAX_PACKAGE_SIZE;
       } else {
-	bufferSize = size - count;
+        bufferSize = size - count;
       }
       
       uint64_t bytes_sent = 0;
 
       while(bytes_sent < bufferSize) {
-	uint64_t bs = send(channel->sock_fd, msg + count, bufferSize - bytes_sent, 0);
+        uint64_t bs = send(channel->sock_fd, msg + count, bufferSize - bytes_sent, 0);
 
-	if(bs < 0) {
-	  perror("error: send");
-	  exit(1);
-	}
+        if(bs < 0) {
+          perror("error: send");
+          exit(1);
+        }
 
-	bytes_sent += bs;
-	count += bs;
+        bytes_sent += bs;
+        count += bs;
       }
     }
     num_bytes_send += size;
@@ -347,35 +362,34 @@ public:
       int activity = select(sd+1, &reading_set , NULL , NULL , NULL);
       if ((activity < 0) && (errno!=EINTR))  { perror("select failed"); exit(1); }
       if (activity > 0) {
-	if (FD_ISSET(sd, &reading_set)){
-	  uint64_t count = 0;
-	  uint64_t bufferSize;
-	  uint64_t bytes_received = 0;
-	  
-	  while(count < size) {
-	    if (count + MAX_PACKAGE_SIZE < size) {
-	      bufferSize = MAX_PACKAGE_SIZE;
-	    } else {
-	      bufferSize = size - count;
-	    }
-	    
-	    uint64_t arrived = 0;
+        if (FD_ISSET(sd, &reading_set)){
+          uint64_t count = 0;
+          uint64_t bufferSize;
+          uint64_t bytes_received = 0;
 
-	    while (arrived < bufferSize) {
-	      uint64_t br = recv(sd, msg + count, bufferSize - arrived, 0);
-	      arrived += br;
-	      count += br;
-	    }
+          while(count < size) {
+            if (count + MAX_PACKAGE_SIZE < size) {
+              bufferSize = MAX_PACKAGE_SIZE;
+            } else {
+              bufferSize = size - count;
+            }
 
-	    bytes_received += arrived;
-	  }
-	  assert(bytes_received == size);
-	  num_bytes_recv += size;
-	  return bytes_received;
-	}
-      }
-      else if (activity == 0){
-	return 0;
+            uint64_t arrived = 0;
+
+            while (arrived < bufferSize) {
+              uint64_t br = recv(sd, msg + count, bufferSize - arrived, 0);
+              arrived += br;
+              count += br;
+            }
+
+            bytes_received += arrived;
+          }
+          assert(bytes_received == size);
+          num_bytes_recv += size;
+          return bytes_received;
+        }
+      } else if (activity == 0){
+        return 0;
       }
     }
   }

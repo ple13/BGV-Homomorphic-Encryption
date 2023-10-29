@@ -123,6 +123,37 @@ Ciphertext BGV::encrypt_with_pk(vector<uint64_t>& pt) {
   return c;
 }
 
+Ciphertext BGV::encrypt_noise_flooding_with_pk() {
+  Ciphertext c(n);
+
+  // Generate u, e1, and d2
+  vector<vector<uint64_t>> u = prng->GenerateZOVector(n);
+  vector<vector<uint64_t>> e1 = prng->GenerateFloodingNoiseVector(n);
+  vector<vector<uint64_t>> e2 = prng->GenerateFloodingNoiseVector(n);
+
+  // Compute te
+  for (int i = 0; i < n; i++) {
+    asmMulWithPModQ(e1[i].data(), e1[i].data());
+    asmMulWithPModQ(e2[i].data(), e2[i].data());
+  }
+
+  // te -> NTT(te)
+  u  = helper->ToEval(u);
+  e1 = helper->ToEval(e1);
+  e2 = helper->ToEval(e2);
+
+  // pk = (pk0, pk1)
+  // ct = (pk0*u + te1, pk1*u + te2)
+  for (int i = 0; i < n; i++) {
+    asmMulModQ(c.a[i].data(), pk.a[i].data(), u[i].data());
+    asmAddModQ(c.a[i].data(), c.a[i].data(), e1[i].data());
+    asmMulModQ(c.b[i].data(), pk.b[i].data(), u[i].data());
+    asmAddModQ(c.b[i].data(), c.b[i].data(), e2[i].data());
+  }
+
+  return c;
+}
+
 CompactedCiphertext BGV::compact_encrypt_with_sk(vector<uint64_t>& pt) {
   CompactedCiphertext c(n);
 

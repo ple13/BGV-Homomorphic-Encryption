@@ -1,11 +1,24 @@
 #include "RandomGenerator.h"
 #include "../crypto/prng.h"
-
+#include <NTL/ZZ.h>
+#include <NTL/RR.h>
 #include <openssl/rand.h>
 
 // Ciphertext sub modulo
 extern "C" void asmSubModQ(uint64_t* Z, uint64_t * X, uint64_t * Y);
 
+namespace {
+  void ZZToU3(NTL::ZZ val, uint64_t *u) {
+    NTL::ZZ temp;
+    NTL::ZZ one = NTL::ZZ(1);
+    temp = val % (one << 64);
+    NTL::BytesFromZZ((unsigned char *)&u[0], val, 8);
+    val = val >> 64;temp = val % (one << 64);
+    NTL::BytesFromZZ((unsigned char *)&u[1], val, 8);
+    val = val >> 64;temp = val % (one << 64);
+    NTL::BytesFromZZ((unsigned char *)&u[2], val, 8);
+  }
+}
 NoiseGenerator::NoiseGenerator(double std) {
   m_std = std;
   
@@ -47,6 +60,9 @@ NoiseGenerator::NoiseGenerator(double std) {
   for (int i = 1; i < m_vals.size(); i++) {
     m_vals[i] += m_vals[i - 1];
   }
+
+  NTL::RR::SetPrecision(110);
+  PI = NTL::ComputePi_RR();
 }
 
 int NoiseGenerator::FindInVector(
@@ -78,6 +94,15 @@ vector<vector<uint64_t>> NoiseGenerator::GenerateGaussianVector(int size) {
         ret[i] = lookUpTable[-(index+1)];
       }
     }
+  }
+  return ret;
+}
+
+vector<vector<uint64_t>> NoiseGenerator::GenerateFloodingNoiseVector(int size) {
+  vector<vector<uint64_t>> ret(size, std::vector<uint64_t>(3));
+  for (int i = 0; i < size; i++) {
+    ret[i].resize(3, 0);
+    RAND_bytes((unsigned char *)ret[i].data(), 112/8);
   }
   return ret;
 }

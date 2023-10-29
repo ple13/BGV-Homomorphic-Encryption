@@ -78,8 +78,6 @@ public:
     this->totalItems = totalItems;
     this->machine = machine;
     this->rate = rate;
-    
-    // Run pre-computation for BGV scheme
     bgv.init();
     bgv.keygen();
   }
@@ -93,7 +91,7 @@ public:
     Timer t;
     
     PSU_AHE(party, nItems,nBuckets, max_size, machine, use_ot);
-    if (party == 0) cout << "Communication (MBytes): " << machine->num_bytes_send/1024.0/1024.0/2 << "\t" << machine->num_bytes_recv/1024.0/1024.0 << "\t" << (machine->num_bytes_send/2 + machine->num_bytes_recv)/1024.0/1024.0 << endl;
+    if (party == 0) cout << "Communication (MBytes): " << machine->num_bytes_send/1024.0/1024.0 << "\t" << machine->num_bytes_recv/1024.0/1024.0 << "\t" << (machine->num_bytes_send + machine->num_bytes_recv)/1024.0/1024.0 << endl;
     t.Tick("PSU************************************");
   }
   
@@ -107,6 +105,8 @@ public:
     Timer t;
     
     if (party == 0) {
+      machine->sendToParty(0, 1, bgv.pk);
+
       for (int i = 0; i < nItems; i++) {
         input.push_back(i+1);
       }
@@ -131,7 +131,7 @@ public:
 
       t.Tick("Interpolation");
 
-      vector<Ciphertext> ciphertexts(nrows*ncols);
+      vector<CompactedCiphertext> ciphertexts(nrows*ncols);
 
       vector<uint64_t> pt(n);
       for (int r = 0; r < nrows; r++) {
@@ -140,7 +140,7 @@ public:
             pt[i] = polynomials[r*n + i][c];
           }
           pt = bgv.helper->packed_encode(pt);
-          ciphertexts[r*ncols + c] = bgv.encrypt_with_sk(pt);
+          ciphertexts[r*ncols + c] = bgv.compact_encrypt_with_sk(pt);
         }
       }
 
@@ -220,6 +220,8 @@ public:
     }
 
     if (party == 1) {
+      machine->receiveFromParty(1, 0, bgv.pk);
+
       for (int i = 0; i < nItems; i++) {
         input.push_back(nItems/4 + i+1);
       }
@@ -238,10 +240,8 @@ public:
         buckets[r].resize(maxSize, 0);
         random_shuffle(buckets[r].begin(), buckets[r].end());
       }
-
       map<int, vector<uint64_t>> plaintexts;
       map<int, vector<vector<uint64_t>>> plaintexts_power;
-
       vector<uint64_t> plaintext(n);
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
@@ -251,7 +251,6 @@ public:
           plaintexts[r*ncols + c] = plaintext;
         }
       }
-
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
           auto pt = plaintexts[r*ncols + c];
@@ -269,6 +268,9 @@ public:
         }
       }
       t.Tick("Prepare plaintexts");
+
+      vector<CompactedCiphertext> compacted_ciphertexts(nrows*max_size, CompactedCiphertext(n));
+      machine->receiveFromParty(1, 0, compacted_ciphertexts);
 
       double tenc = 0;
       double teva = 0;
@@ -296,7 +298,9 @@ public:
 
       vector<Ciphertext> ciphertexts(nrows*max_size, Ciphertext(n));
       vector<Ciphertext> output_ciphertexts(nrows*ncols, Ciphertext(n));
-      machine->receiveFromParty(1, 0, ciphertexts);
+      for (int i = 0; i < compacted_ciphertexts.size(); i++) {
+        ciphertexts[i] = bgv.toCiphertext(compacted_ciphertexts[i]);
+      }
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
           Ciphertext temp_ciphertext(n);
@@ -306,6 +310,9 @@ public:
               ciphertexts[r*ncols + k], ptNulls[r*ncols + c][k-1]);
             bgv.EvalAdd(output_ciphertexts[r*ncols + c], temp_ciphertext);
           }
+          // Noise flooding
+          auto noise_ciphertext = bgv.encrypt_noise_flooding_with_pk();
+          bgv.EvalAdd(output_ciphertexts[r*ncols + c], noise_ciphertext);
           machine->sendToParty(1, 0, output_ciphertexts[r*ncols + c]);
         }
       }
@@ -320,6 +327,9 @@ public:
                 ciphertexts[r*ncols + k], ptNulls[r*ncols + c][k]);
               bgv.EvalAdd(output_ciphertexts[r*ncols + c], temp_ciphertext);
             }
+            // Noise flooding
+            auto noise_ciphertext = bgv.encrypt_noise_flooding_with_pk();
+            bgv.EvalAdd(output_ciphertexts[r*ncols + c], noise_ciphertext);
             machine->sendToParty(1, 0, output_ciphertexts[r*ncols + c]);
           }
         }

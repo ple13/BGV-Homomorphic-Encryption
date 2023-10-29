@@ -20,12 +20,14 @@ std::vector<int> findCutAndChooseParams(int inputSize);
 
 int main() {
   int n = 1048576;
-  int nBuckets = 1000;
+  int nBuckets = 4096;
   int sec = 40;
-  std::cout << n << " " << nBuckets << " " << findMaxBucketSize(n, nBuckets, sec) << std::endl;
-  
-  n = 65536;
-  std::cout << n << " " << nBuckets << " " << findMaxBucketSize(n, nBuckets, sec) << std::endl;
+  for (int n = (1 << 14); n <= (1<<20); n = n*4) {
+    for (int i = 1; i <= n/nBuckets; i++) {
+      int size = findMaxBucketSize(n, nBuckets*i, sec);
+      std::cout << n << "\t" << nBuckets*i << "\t" << size << "\t" << size*i << "\t" << size*i*size << std::endl;
+    }
+  }
   
   return 0;
 }
@@ -49,34 +51,32 @@ __float128 prob(int64_t n, int64_t m, int64_t t) {
 	// m = n/c
 	// Pr[X = t] = (n chooses t)*1/m^t*((m-1)/m)^(n-t) = m * n(n-1)...(n-t+1)/t! * 1/(m-1)^t * e^(-c)
 	// Pr[X = t] = e^(-c)* Prod_{i=0...(t-1)} (n-i)/((i+1)*(m-1))
-	
+
 	double c = (double)n/(double)m;
-	
+
 	__float128 d = exp(-c);
-	
+
 	__float128 prod = d; // prod = e^(-c)
-	
-	for(int64_t idx = 0; idx < t; idx++)
-	{
+
+	for(int64_t idx = 0; idx < t; idx++) {
 		d *= ((__float128)(n-idx))/(((__float128)(idx + 1))*((__float128)(m-1)));
 	}
-	
+
 	return d;
 }
 
 // Find max bucket size with prob (1 - 2^sec)
 int findMaxBucketSize(int n, int nBuckets, int sec) {
   int ret = (double)n/(double)nBuckets;
-  __float128 secureParam = pow(2.0, -sec);  
+  __float128 secureParam = pow(2.0, -sec);
   __float128 probability = (__float128)nBuckets*prob(n, nBuckets, ret);
-    
+
   
   for(int idx = ret; idx <= 2048; idx++) {
     if(probability < secureParam){
-      std::cout << "ret: " << idx << std::endl;
-      break;
+      return idx;
     }
-    
+
     __float128 scale = (__float128)(n - idx - 1)/(__float128)((idx + 2)*(nBuckets - 1));
     probability *= scale;
   }

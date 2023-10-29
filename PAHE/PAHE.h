@@ -16,11 +16,6 @@
 using namespace std;
 
 #define BYTES_PER_CIPHERTEXT_MODULUS 3
-
-struct PublicKey {
-  vector<vector<uint64_t>> a;
-  vector<vector<uint64_t>> b;
-};
   
 struct Ciphertext {
   vector<vector<uint64_t>> a;
@@ -36,7 +31,7 @@ struct CompactedCiphertext {
   vector<unsigned char> b;
   CompactedCiphertext(int n = 4096) {
     a.resize(n, vector<uint64_t>(3));
-    b.resize(SEED_SIZE);
+    b.resize(2*SEED_SIZE);
   }
 };
 
@@ -56,6 +51,8 @@ public:
   Ciphertext encrypt_with_sk(vector<uint64_t>& pt);
   Ciphertext encrypt_with_pk(vector<uint64_t>& pt);
 
+  Ciphertext encrypt_noise_flooding_with_pk();
+
   CompactedCiphertext compact_encrypt_with_sk(vector<uint64_t>& pt);
   Ciphertext toCiphertext(CompactedCiphertext compactedCiphertext);
   
@@ -74,7 +71,7 @@ public:
   uint64_t root_of_unity_plaintext;
   vector<uint64_t> root_of_unity_ciphertext;
 
-  PublicKey pk;
+  Ciphertext pk;
   vector<vector<uint64_t>> sk;
   
   PAHEHelper *helper;
