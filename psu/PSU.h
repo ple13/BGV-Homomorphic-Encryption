@@ -16,30 +16,30 @@
 #define PSU_H__
 
 #pragma once
-#include <cstddef>
-#include <iterator>
-#include <sstream>
-#include <vector>
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <math.h>
-#include <cstring>
-#include <openssl/rand.h>
-#include <openssl/sha.h>
-#include <algorithm>
-#include <future>
-
-#include <unistd.h>
 #include <NTL/ZZ.h>
 #include <emmintrin.h>
+#include <math.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
+#include <algorithm>
+#include <cstddef>
+#include <cstring>
+#include <future>
+#include <iostream>
+#include <iterator>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "../PAHE/PAHE.h"
+#include "../PAHE/RandomGenerator.h"
 #include "../maths/HashInput.h"
 #include "../maths/utils.h"
 #include "../network/Machine.hpp"
-#include "../PAHE/PAHE.h"
-#include "../PAHE/RandomGenerator.h"
 
 using namespace std;
 using namespace NTL;
@@ -65,7 +65,7 @@ void printCiphertext(Ciphertext ct) {
 }
 
 class PSU {
-public:
+ public:
   int machineId;
   int party;
   int partner;
@@ -76,12 +76,13 @@ public:
   int nBuckets;
   int max_size;
   int use_ot;
-  
+
   BGV bgv;
-  
+
   Machine *machine;
-  
-  PSU (int machineId, int party, int totalParties, int totalItems, int nBuckets, int max_size, int use_ot, Machine *machine, float rate) {
+
+  PSU(int machineId, int party, int totalParties, int totalItems, int nBuckets,
+      int max_size, int use_ot, Machine *machine, float rate) {
     this->totalParties = totalParties;
     this->nBuckets = nBuckets;
     this->max_size = max_size;
@@ -94,35 +95,40 @@ public:
     bgv.init();
     bgv.keygen();
   }
-    
-  ~PSU(){
-    delete machine;
-  }
-  
+
+  ~PSU() { delete machine; }
+
   void PSUComputation(int test) {
     int nItems = totalItems;
     Timer t;
-    
-    PSU_AHE(party, nItems,nBuckets, max_size, machine, use_ot);
-    if (party == 0) cout << "Communication (MBytes): " << machine->num_bytes_send/1024.0/1024.0 << "\t" << machine->num_bytes_recv/1024.0/1024.0 << "\t" << (machine->num_bytes_send + machine->num_bytes_recv)/1024.0/1024.0 << endl;
+
+    PSU_AHE(party, nItems, nBuckets, max_size, machine, use_ot);
+    if (party == 0)
+      cout << "Communication (MBytes): "
+           << machine->num_bytes_send / 1024.0 / 1024.0 << "\t"
+           << machine->num_bytes_recv / 1024.0 / 1024.0 << "\t"
+           << (machine->num_bytes_send + machine->num_bytes_recv) / 1024.0 /
+                  1024.0
+           << endl;
     t.Tick("PSU************************************");
   }
-  
-  int PSU_AHE(int party, int nItems, int nBuckets, int max_size, Machine *machine, int use_ot) {
+
+  int PSU_AHE(int party, int nItems, int nBuckets, int max_size,
+              Machine *machine, int use_ot) {
     vector<uint64_t> input;
 
     int n = bgv.n;
-    int nrows = nBuckets/n;
+    int nrows = nBuckets / n;
     int ncols = max_size;
     int other_party = 1 - party;
-    
+
     Timer t;
-    
+
     if (party == 0) {
       machine->sendToParty(other_party, bgv.pk);
 
       for (int i = 0; i < nItems; i++) {
-        input.push_back(i+1);
+        input.push_back(i + 1);
       }
       int maxSize = 0;
       auto buckets = hashInput(input, nBuckets, "0xasdflafdlaf");
@@ -133,8 +139,8 @@ public:
         maxSize = max_size;
       }
 
-      cout << "(nrows, ncols, max bin): "
-           << nrows << " " << ncols << " " << maxSize << endl;
+      cout << "(nrows, ncols, max bin): " << nrows << " " << ncols << " "
+           << maxSize << endl;
 
       // Convert (X - x_i1)...(X - x_ik) to a_i0 + a_i1*X + ... + a_ik*X^k
       map<int, vector<uint64_t>> polynomials;
@@ -145,16 +151,16 @@ public:
 
       t.Tick("Interpolation");
 
-      vector<CompactedCiphertext> ciphertexts(nrows*ncols);
+      vector<CompactedCiphertext> ciphertexts(nrows * ncols);
 
       vector<uint64_t> pt(n);
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
           for (int i = 0; i < n; i++) {
-            pt[i] = polynomials[r*n + i][c];
+            pt[i] = polynomials[r * n + i][c];
           }
           pt = bgv.helper->packed_encode(pt);
-          ciphertexts[r*ncols + c] = bgv.compact_encrypt_with_sk(pt);
+          ciphertexts[r * ncols + c] = bgv.compact_encrypt_with_sk(pt);
         }
       }
 
@@ -163,15 +169,16 @@ public:
       machine->sendToParty(other_party, ciphertexts);
 
       t.Tick("Sending data");
-      vector<Ciphertext> output_ciphertexts(nrows*ncols, Ciphertext(n));
+      vector<Ciphertext> output_ciphertexts(nrows * ncols, Ciphertext(n));
       vector<uint64_t> Px;
       vector<uint64_t> xPx;
 
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
-          machine->receiveFromParty(other_party, output_ciphertexts[r*ncols + c]);
+          machine->receiveFromParty(other_party,
+                                    output_ciphertexts[r * ncols + c]);
 
-          auto d = bgv.decrypt(output_ciphertexts[r*ncols + c]);
+          auto d = bgv.decrypt(output_ciphertexts[r * ncols + c]);
           d = bgv.helper->packed_decode(d);
           int count = 0;
           for (int k = 0; k < n; k++) {
@@ -196,9 +203,10 @@ public:
       if (!use_ot) {
         for (int r = 0; r < nrows; r++) {
           for (int c = 0; c < ncols; c++) {
-            machine->receiveFromParty(other_party, output_ciphertexts[r*ncols + c]);
+            machine->receiveFromParty(other_party,
+                                      output_ciphertexts[r * ncols + c]);
 
-            auto d = bgv.decrypt(output_ciphertexts[r*ncols + c]);
+            auto d = bgv.decrypt(output_ciphertexts[r * ncols + c]);
             d = bgv.helper->packed_decode(d);
             int count = 0;
             for (int k = 0; k < n; k++) {
@@ -211,10 +219,11 @@ public:
 
         // Compute the union set
         std::vector<uint64_t> union_set;
-        for(int i = 0; i < Px.size(); i++) {
+        for (int i = 0; i < Px.size(); i++) {
           if (Px[i] != 0 && xPx[i] != 0) {
             uint64_t inv = invModP(Px[i]);
-            uint64_t val = (unsigned __int128)inv*(unsigned __int128)xPx[i] % 18446744073709436929ULL;
+            uint64_t val = (unsigned __int128)inv * (unsigned __int128)xPx[i] %
+                           18446744073709436929ULL;
             union_set.push_back(val);
           }
         }
@@ -222,11 +231,12 @@ public:
         t.Tick("Compute the diff set");
       } else {
         // Emulate OT
-        vector<uint64_t> m0(nBuckets*max_size), mb(nBuckets*max_size);
-        machine->receiveFromParty(other_party, (unsigned char *)m0.data(), 8*nBuckets*max_size);
+        vector<uint64_t> m0(nBuckets * max_size), mb(nBuckets * max_size);
+        machine->receiveFromParty(other_party, (unsigned char *)m0.data(),
+                                  8 * nBuckets * max_size);
         for (int r = 0; r < nBuckets; r++) {
           for (int c = 0; c < max_size; c++) {
-            m0[r*max_size + c] -= mb[r*max_size + c];
+            m0[r * max_size + c] -= mb[r * max_size + c];
           }
         }
         // End emulate OT
@@ -237,7 +247,7 @@ public:
       machine->receiveFromParty(other_party, bgv.pk);
 
       for (int i = 0; i < nItems; i++) {
-        input.push_back(nItems/4 + i+1);
+        input.push_back(nItems / 4 + i + 1);
       }
 
       int maxSize = 0;
@@ -260,30 +270,31 @@ public:
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
           for (int i = 0; i < n; i++) {
-            plaintext[i] = buckets[r*n + i][c];
+            plaintext[i] = buckets[r * n + i][c];
           }
-          plaintexts[r*ncols + c] = plaintext;
+          plaintexts[r * ncols + c] = plaintext;
         }
       }
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
-          auto pt = plaintexts[r*ncols + c];
-          plaintexts_power[r*ncols + c].push_back(pt);
+          auto pt = plaintexts[r * ncols + c];
+          plaintexts_power[r * ncols + c].push_back(pt);
           for (int k = 1; k < max_size; k++) {
             vector<uint64_t> temp(n);
             for (int i = 0; i < n; i++) {
               temp[i] =
-                (unsigned __int128)pt[i] *
-                (unsigned __int128)plaintexts_power[r*ncols + c][k-1][i] %
-                bgv.helper->plaintextModulus;
+                  (unsigned __int128)pt[i] *
+                  (unsigned __int128)plaintexts_power[r * ncols + c][k - 1][i] %
+                  bgv.helper->plaintextModulus;
             }
-            plaintexts_power[r*ncols + c].push_back(temp);
+            plaintexts_power[r * ncols + c].push_back(temp);
           }
         }
       }
       t.Tick("Prepare plaintexts");
 
-      vector<CompactedCiphertext> compacted_ciphertexts(nrows*max_size, CompactedCiphertext(n));
+      vector<CompactedCiphertext> compacted_ciphertexts(nrows * max_size,
+                                                        CompactedCiphertext(n));
       machine->receiveFromParty(other_party, compacted_ciphertexts);
 
       double tenc = 0;
@@ -296,9 +307,10 @@ public:
         for (int c = 0; c < ncols; c++) {
           for (int k = 0; k < max_size; k++) {
             Timer t;
-            vector<uint64_t> pt = bgv.helper->packed_encode(plaintexts_power[r*ncols + c][k]);
+            vector<uint64_t> pt =
+                bgv.helper->packed_encode(plaintexts_power[r * ncols + c][k]);
             tenc += t.Tick("");
-            ptNulls[r*ncols + c].push_back(bgv.helper->ToEval(pt));
+            ptNulls[r * ncols + c].push_back(bgv.helper->ToEval(pt));
             teva += t.Tick("");
           }
         }
@@ -310,113 +322,108 @@ public:
 
       t.Tick("Transform plaintext");
 
-      vector<Ciphertext> ciphertexts(nrows*max_size, Ciphertext(n));
-      vector<Ciphertext> output_ciphertexts(nrows*ncols, Ciphertext(n));
+      vector<Ciphertext> ciphertexts(nrows * max_size, Ciphertext(n));
+      vector<Ciphertext> output_ciphertexts(nrows * ncols, Ciphertext(n));
       for (int i = 0; i < compacted_ciphertexts.size(); i++) {
         ciphertexts[i] = bgv.toCiphertext(compacted_ciphertexts[i]);
       }
       for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
           Ciphertext temp_ciphertext(n);
-          output_ciphertexts[r*ncols + c] = ciphertexts[r*ncols];
+          output_ciphertexts[r * ncols + c] = ciphertexts[r * ncols];
           for (int k = 1; k < max_size; k++) {
-            bgv.EvalMultPlain(temp_ciphertext,
-              ciphertexts[r*ncols + k], ptNulls[r*ncols + c][k-1]);
-            bgv.EvalAdd(output_ciphertexts[r*ncols + c], temp_ciphertext);
+            bgv.EvalMultPlain(temp_ciphertext, ciphertexts[r * ncols + k],
+                              ptNulls[r * ncols + c][k - 1]);
+            bgv.EvalAdd(output_ciphertexts[r * ncols + c], temp_ciphertext);
           }
           // Noise flooding
           auto noise_ciphertext = bgv.encrypt_noise_flooding_with_pk();
-          bgv.EvalAdd(output_ciphertexts[r*ncols + c], noise_ciphertext);
-          machine->sendToParty(other_party, output_ciphertexts[r*ncols + c]);
+          bgv.EvalAdd(output_ciphertexts[r * ncols + c], noise_ciphertext);
+          machine->sendToParty(other_party, output_ciphertexts[r * ncols + c]);
         }
       }
       t.Tick("Evaluate the polynomials");
       if (!use_ot) {
-        vector<Ciphertext> output_ciphertexts(nrows*max_size, Ciphertext(n));
+        vector<Ciphertext> output_ciphertexts(nrows * max_size, Ciphertext(n));
         for (int r = 0; r < nrows; r++) {
           for (int c = 0; c < ncols; c++) {
             Ciphertext temp_ciphertext(n);
             for (int k = 0; k < max_size; k++) {
-              bgv.EvalMultPlain(temp_ciphertext,
-                ciphertexts[r*ncols + k], ptNulls[r*ncols + c][k]);
-              bgv.EvalAdd(output_ciphertexts[r*ncols + c], temp_ciphertext);
+              bgv.EvalMultPlain(temp_ciphertext, ciphertexts[r * ncols + k],
+                                ptNulls[r * ncols + c][k]);
+              bgv.EvalAdd(output_ciphertexts[r * ncols + c], temp_ciphertext);
             }
             // Noise flooding
             auto noise_ciphertext = bgv.encrypt_noise_flooding_with_pk();
-            bgv.EvalAdd(output_ciphertexts[r*ncols + c], noise_ciphertext);
-            machine->sendToParty(other_party, output_ciphertexts[r*ncols + c]);
+            bgv.EvalAdd(output_ciphertexts[r * ncols + c], noise_ciphertext);
+            machine->sendToParty(other_party,
+                                 output_ciphertexts[r * ncols + c]);
           }
         }
         t.Tick("Evaluate the polynomials");
       } else {
         // Emulate OT
-        vector<uint64_t> m0(nBuckets*max_size), m1(nBuckets*max_size);
+        vector<uint64_t> m0(nBuckets * max_size), m1(nBuckets * max_size);
 
         for (int r = 0; r < nBuckets; r++) {
           buckets[r].resize(max_size, 0);
           for (int c = 0; c < max_size; c++) {
             if (rand() % 2) {
-              m0[r*max_size + c] = buckets[r][c] - m1[r*max_size + c];
+              m0[r * max_size + c] = buckets[r][c] - m1[r * max_size + c];
             } else {
-              m0[r*max_size + c] = buckets[r][c] - m0[r*max_size + c];
+              m0[r * max_size + c] = buckets[r][c] - m0[r * max_size + c];
             }
           }
         }
 
-        machine->sendToParty(other_party, (unsigned char *)m0.data(), 8*nBuckets*max_size);
+        machine->sendToParty(other_party, (unsigned char *)m0.data(),
+                             8 * nBuckets * max_size);
       }
     }
-    
+
     return 0;
   }
-  
-  void GenerateInput(int party, vector<uint64_t>& data, int nItems,
-		     float rate = 0.5) {
-    if(party == Alice) {
+
+  void GenerateInput(int party, vector<uint64_t> &data, int nItems,
+                     float rate = 0.5) {
+    if (party == Alice) {
       data.resize(nItems);
-      
-      for(int i = 0; i < nItems; i++) {
+
+      for (int i = 0; i < nItems; i++) {
         data[i] = i + 1;
       }
-    } else if(party == Bob) {
+    } else if (party == Bob) {
       int intersectionSize;
-      
-      if(rate <= 1) intersectionSize = nItems*rate; //rand() % (nItems);
-      else intersectionSize = rate;
-      
+
+      if (rate <= 1)
+        intersectionSize = nItems * rate;  // rand() % (nItems);
+      else
+        intersectionSize = rate;
+
       cout << "intersection size: " << intersectionSize << endl;
-      
+
       data.resize(nItems);
-      
+
       data[0] = 1;
-      for(int i = 1; i < nItems; i++) {
+      for (int i = 1; i < nItems; i++) {
         data[i] = (i + 1 + nItems - intersectionSize);
       }
     }
   }
-  
-  void GenerateInput(int party, vector<uint64_t>& data, int nItems) {
+
+  void GenerateInput(int party, vector<uint64_t> &data, int nItems) {
     data.resize(nItems);
-    if(party == 0) {      
-      for(int i = 0; i < nItems; i++) {
-	data[i] = uint64_t(i + 1);
+    if (party == 0) {
+      for (int i = 0; i < nItems; i++) {
+        data[i] = uint64_t(i + 1);
       }
     } else {
       data[0] = uint64_t(1);
-      for(int i = 1; i < nItems; i++) {
-	data[i] = uint64_t(i + 1 + nItems);
+      for (int i = 1; i < nItems; i++) {
+        data[i] = uint64_t(i + 1 + nItems);
       }
     }
   }
 };
 
 #endif
-
-
-
-  
-
-
-
-
-

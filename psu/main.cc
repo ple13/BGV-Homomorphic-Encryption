@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string>
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include <iostream>
+#include <string>
+
 #include "../network/Machine.hpp"
 #include "PSU.h"
 
@@ -34,17 +36,20 @@ int main(int argc, char** argv) {
   int test = 0;
   float rate = 0.75;
 
-//   std::cout << totalParties << " " << machineId << " " << party << std::endl;
-  
-  Machine * machine = new Machine(totalParties, /*totalMachines=*/1, machineId, party);
+  //   std::cout << totalParties << " " << machineId << " " << party <<
+  //   std::endl;
+
+  Machine* machine =
+      new Machine(totalParties, /*totalMachines=*/1, machineId, party);
   machine->connecting(peerBasePort, partyBasePort);
-  
-//   cout << "Networking Done." << endl;
-  
+
+  //   cout << "Networking Done." << endl;
+
   usleep(5000);
-  
-  PSU * mpc = new PSU(machineId, party, totalParties, itemLength, nBuckets, max_size, use_ot, machine, rate);
-  
+
+  PSU* mpc = new PSU(machineId, party, totalParties, itemLength, nBuckets,
+                     max_size, use_ot, machine, rate);
+
   Timer tt;
   mpc->PSUComputation(test);
   tt.Tick("GraphComputation()");
