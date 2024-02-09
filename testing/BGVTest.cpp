@@ -1,4 +1,19 @@
+// Copyright 2024 Phi Hung Le
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "BGVTest.h"
+
 #include <iostream>
 
 void BGVTest::testPublicKey() {
@@ -8,7 +23,7 @@ void BGVTest::testPublicKey() {
 
   vector<uint64_t> d = bgv.decrypt(c);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     assert(d[idx] == 0);
   }
 }
@@ -16,7 +31,7 @@ void BGVTest::testPublicKey() {
 void BGVTest::testEncryption() {
   vector<uint64_t> v(bgv.n);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     v[idx] = idx;
   }
 
@@ -27,7 +42,7 @@ void BGVTest::testEncryption() {
 
   d = bgv.helper->packed_decode(d);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     assert((d[idx] % bgv.helper->plaintextModulus) == v[idx]);
   }
 }
@@ -42,7 +57,7 @@ void BGVTest::testEncryptionWithPk() {
 
   d = bgv.helper->packed_decode(d);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     assert(d[idx] == v[idx]);
   }
 }
@@ -51,7 +66,7 @@ void BGVTest::testPlainMult() {
   vector<uint64_t> v1(bgv.n);
   vector<uint64_t> v2(bgv.n);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     v1[idx] = idx;
     v2[idx] = idx;
   }
@@ -60,15 +75,15 @@ void BGVTest::testPlainMult() {
   auto pt2 = bgv.helper->packed_encode(v2);
 
   Ciphertext c1 = bgv.encrypt_with_sk(pt1);
-  auto c2_null  = bgv.helper->ToEval(pt2);
+  auto c2_null = bgv.helper->ToEval(pt2);
 
   bgv.EvalMultPlain(c1, c2_null);
   vector<uint64_t> d = bgv.decrypt(c1);
 
   d = bgv.helper->packed_decode(d);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
-    assert((d[idx] % bgv.helper->plaintextModulus) == v1[idx]*v2[idx]);
+  for (int idx = 0; idx < bgv.n; idx++) {
+    assert((d[idx] % bgv.helper->plaintextModulus) == v1[idx] * v2[idx]);
   }
 }
 
@@ -77,7 +92,7 @@ void BGVTest::testSHE() {
   vector<uint64_t> v2(bgv.n);
   vector<uint64_t> v3(bgv.n);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     v1[idx] = idx;
     v2[idx] = idx + 1;
     v3[idx] = idx + 2;
@@ -88,8 +103,8 @@ void BGVTest::testSHE() {
   auto pt3 = bgv.helper->packed_encode(v3);
 
   Ciphertext c1 = bgv.encrypt_with_sk(pt1);
-  auto c2_null  = bgv.helper->ToEval(pt2);
-  auto c3_null  = bgv.helper->ToEval(pt3);
+  auto c2_null = bgv.helper->ToEval(pt2);
+  auto c3_null = bgv.helper->ToEval(pt3);
 
   bgv.EvalMultPlain(c1, c2_null);
   bgv.EvalAddPlain(c1, c3_null);
@@ -98,8 +113,9 @@ void BGVTest::testSHE() {
 
   d = bgv.helper->packed_decode(d);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
-    assert((d[idx] % bgv.helper->plaintextModulus) == (v1[idx]*v2[idx] + v3[idx]));
+  for (int idx = 0; idx < bgv.n; idx++) {
+    assert((d[idx] % bgv.helper->plaintextModulus) ==
+           (v1[idx] * v2[idx] + v3[idx]));
   }
 }
 
@@ -108,7 +124,7 @@ void BGVTest::testSHEwithPK() {
   vector<uint64_t> v2(bgv.n);
   vector<uint64_t> v3(bgv.n);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     v1[idx] = idx;
     v2[idx] = idx + 1;
     v3[idx] = idx + 2;
@@ -119,8 +135,8 @@ void BGVTest::testSHEwithPK() {
   auto pt3 = bgv.helper->packed_encode(v3);
 
   Ciphertext c1 = bgv.encrypt_with_pk(pt1);
-  auto c2_null  = bgv.helper->ToEval(pt2);
-  auto c3_null  = bgv.helper->ToEval(pt3);
+  auto c2_null = bgv.helper->ToEval(pt2);
+  auto c3_null = bgv.helper->ToEval(pt3);
 
   bgv.EvalMultPlain(c1, c2_null);
   bgv.EvalAddPlain(c1, c3_null);
@@ -129,8 +145,9 @@ void BGVTest::testSHEwithPK() {
 
   d = bgv.helper->packed_decode(d);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
-    assert((d[idx] % bgv.helper->plaintextModulus) == (v1[idx]*v2[idx] + v3[idx]));
+  for (int idx = 0; idx < bgv.n; idx++) {
+    assert((d[idx] % bgv.helper->plaintextModulus) ==
+           (v1[idx] * v2[idx] + v3[idx]));
   }
 }
 
@@ -139,7 +156,7 @@ void BGVTest::benchmark() {
   vector<uint64_t> v2(bgv.n);
   vector<uint64_t> v3(bgv.n);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     v1[idx] = idx;
     v2[idx] = idx + 1;
     v3[idx] = idx + 2;
@@ -150,8 +167,8 @@ void BGVTest::benchmark() {
   auto pt3 = bgv.helper->packed_encode(v3);
 
   Ciphertext c1 = bgv.encrypt_with_pk(pt1);
-  auto c2_null  = bgv.helper->ToEval(pt2);
-  auto c3_null  = bgv.helper->ToEval(pt3);
+  auto c2_null = bgv.helper->ToEval(pt2);
+  auto c3_null = bgv.helper->ToEval(pt3);
   vector<uint64_t> d = bgv.decrypt(c1);
 
   Timer t;
@@ -164,7 +181,7 @@ void BGVTest::benchmark() {
   }
   t.Tick("Encrypt");
   for (int i = 0; i < 100; i++) {
-    c2_null  = bgv.helper->ToEval(pt2);
+    c2_null = bgv.helper->ToEval(pt2);
   }
   t.Tick("ToEval");
   for (int i = 0; i < 100; i++) {
@@ -186,9 +203,9 @@ void BGVTest::benchmark() {
 }
 
 void BGVTest::compacted_ciphertext_to_ciphertext() {
-   vector<uint64_t> v(bgv.n);
+  vector<uint64_t> v(bgv.n);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     v[idx] = idx;
   }
 
@@ -201,7 +218,7 @@ void BGVTest::compacted_ciphertext_to_ciphertext() {
 
   d = bgv.helper->packed_decode(d);
 
-  for(int idx = 0; idx < bgv.n; idx++) {
+  for (int idx = 0; idx < bgv.n; idx++) {
     assert((d[idx] % bgv.helper->plaintextModulus) == v[idx]);
   }
 }

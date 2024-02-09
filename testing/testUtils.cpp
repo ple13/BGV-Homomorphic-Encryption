@@ -1,3 +1,17 @@
+// Copyright 2024 Phi Hung Le
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "testUtils.h"
 
 void ZZToU3(ZZ val, uint64_t *u) {
@@ -5,9 +19,11 @@ void ZZToU3(ZZ val, uint64_t *u) {
   ZZ one = ZZ(1);
   temp = val % (one << 64);
   BytesFromZZ((unsigned char *)&u[0], val, 8);
-  val = val >> 64;temp = val % (one << 64);
+  val = val >> 64;
+  temp = val % (one << 64);
   BytesFromZZ((unsigned char *)&u[1], val, 8);
-  val = val >> 64;temp = val % (one << 64);
+  val = val >> 64;
+  temp = val % (one << 64);
   BytesFromZZ((unsigned char *)&u[2], val, 8);
 }
 
@@ -37,26 +53,24 @@ void printU3(vector<uint64_t> val) {
   cout << "v[2]: " << val[2] << endl;
 }
 
-std::ostream&
-operator<<( std::ostream& dest, __int128_t value ) {
-  std::ostream::sentry s( dest );
-  if ( s ) {
+std::ostream &operator<<(std::ostream &dest, __int128_t value) {
+  std::ostream::sentry s(dest);
+  if (s) {
     __int128_t tmp = value < 0 ? -value : value;
-    char buffer[ 128 ];
-    char* d = std::end( buffer );
-    do
-    {
-      -- d;
-      *d = "0123456789"[ tmp % 10 ];
+    char buffer[128];
+    char *d = std::end(buffer);
+    do {
+      --d;
+      *d = "0123456789"[tmp % 10];
       tmp /= 10;
-    } while ( tmp != 0 );
-    if ( value < 0 ) {
-      -- d;
+    } while (tmp != 0);
+    if (value < 0) {
+      --d;
       *d = '-';
     }
-    int len = std::end( buffer ) - d;
-    if ( dest.rdbuf()->sputn( d, len ) != len ) {
-      dest.setstate( std::ios_base::badbit );
+    int len = std::end(buffer) - d;
+    if (dest.rdbuf()->sputn(d, len) != len) {
+      dest.setstate(std::ios_base::badbit);
     }
   }
   return dest;

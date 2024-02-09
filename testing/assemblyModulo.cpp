@@ -1,26 +1,41 @@
-#include <cassert>
-#include <cstdint>
-#include <array>
-#include <algorithm>
-#include <numeric>
-#include <iostream>
-#include <random>
+// Copyright 2024 Phi Hung Le
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <NTL/ZZ.h>
 
-#include "immintrin.h"
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <iostream>
+#include <numeric>
+#include <random>
+
 #include "../utils/Timer.h"
+#include "immintrin.h"
 
 using namespace NTL;
 using namespace std;
 
-extern "C" void asmMulModQ(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmAddModQ(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmSubModQ(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmMulModP(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmAddModP(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmSubModP(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmMulWithPModQ(uint64_t* Z, uint64_t * X);
-extern "C" void asmModPInQ(uint64_t* Z, uint64_t * X);
+extern "C" void asmMulModQ(uint64_t *Z, uint64_t *X, uint64_t *Y);
+extern "C" void asmAddModQ(uint64_t *Z, uint64_t *X, uint64_t *Y);
+extern "C" void asmSubModQ(uint64_t *Z, uint64_t *X, uint64_t *Y);
+extern "C" void asmMulModP(uint64_t *Z, uint64_t *X, uint64_t *Y);
+extern "C" void asmAddModP(uint64_t *Z, uint64_t *X, uint64_t *Y);
+extern "C" void asmSubModP(uint64_t *Z, uint64_t *X, uint64_t *Y);
+extern "C" void asmMulWithPModQ(uint64_t *Z, uint64_t *X);
+extern "C" void asmModPInQ(uint64_t *Z, uint64_t *X);
 
 void testModMult192bits();
 void testModMult64bits();
@@ -36,9 +51,11 @@ void ZZToU3(ZZ val, uint64_t *u) {
   ZZ one = ZZ(1);
   temp = val % (one << 64);
   BytesFromZZ((unsigned char *)&u[0], val, 8);
-  val = val >> 64;temp = val % (one << 64);
+  val = val >> 64;
+  temp = val % (one << 64);
   BytesFromZZ((unsigned char *)&u[1], val, 8);
-  val = val >> 64;temp = val % (one << 64);
+  val = val >> 64;
+  temp = val % (one << 64);
   BytesFromZZ((unsigned char *)&u[2], val, 8);
 }
 
@@ -68,32 +85,30 @@ void printU3(vector<uint64_t> val) {
   cout << "v[2]: " << val[2] << endl;
 }
 
-std::ostream&
-operator<<( std::ostream& dest, __int128_t value ) {
-  std::ostream::sentry s( dest );
-  if ( s ) {
+std::ostream &operator<<(std::ostream &dest, __int128_t value) {
+  std::ostream::sentry s(dest);
+  if (s) {
     __int128_t tmp = value < 0 ? -value : value;
-    char buffer[ 128 ];
-    char* d = std::end( buffer );
-    do
-    {
-      -- d;
-      *d = "0123456789"[ tmp % 10 ];
+    char buffer[128];
+    char *d = std::end(buffer);
+    do {
+      --d;
+      *d = "0123456789"[tmp % 10];
       tmp /= 10;
-    } while ( tmp != 0 );
-    if ( value < 0 ) {
-      -- d;
+    } while (tmp != 0);
+    if (value < 0) {
+      --d;
       *d = '-';
     }
-    int len = std::end( buffer ) - d;
-    if ( dest.rdbuf()->sputn( d, len ) != len ) {
-      dest.setstate( std::ios_base::badbit );
+    int len = std::end(buffer) - d;
+    if (dest.rdbuf()->sputn(d, len) != len) {
+      dest.setstate(std::ios_base::badbit);
     }
   }
   return dest;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   testModMult192bits();
   testModMult64bits();
   testModMultWithP();

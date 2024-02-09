@@ -1,49 +1,62 @@
-#include <cassert>
-#include <cstdint>
-#include <array>
-#include <algorithm>
-#include <numeric>
-#include <iostream>
-#include <random>
+// Copyright 2024 Phi Hung Le
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <NTL/ZZ.h>
 
-#include "immintrin.h"
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <iostream>
+#include <numeric>
+#include <random>
+
 #include "../utils/Timer.h"
+#include "immintrin.h"
 
 using namespace NTL;
 using namespace std;
 
-extern "C" void asmMulModQ(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmMulModP(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmSubModQ(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmMulModP(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmAddModP(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmSubModP(uint64_t* Z, uint64_t * X, uint64_t * Y);
-extern "C" void asmMulWithPModQ(uint64_t* Z, uint64_t * X);
+extern "C" void asmMulModQ(uint64_t* Z, uint64_t* X, uint64_t* Y);
+extern "C" void asmMulModP(uint64_t* Z, uint64_t* X, uint64_t* Y);
+extern "C" void asmSubModQ(uint64_t* Z, uint64_t* X, uint64_t* Y);
+extern "C" void asmMulModP(uint64_t* Z, uint64_t* X, uint64_t* Y);
+extern "C" void asmAddModP(uint64_t* Z, uint64_t* X, uint64_t* Y);
+extern "C" void asmSubModP(uint64_t* Z, uint64_t* X, uint64_t* Y);
+extern "C" void asmMulWithPModQ(uint64_t* Z, uint64_t* X);
 
 void testModMult192bits();
 void testModMult64bits();
 
-std::ostream&
-operator<<( std::ostream& dest, __int128_t value ) {
-  std::ostream::sentry s( dest );
-  if ( s ) {
+std::ostream& operator<<(std::ostream& dest, __int128_t value) {
+  std::ostream::sentry s(dest);
+  if (s) {
     __int128_t tmp = value < 0 ? -value : value;
-    char buffer[ 128 ];
-    char* d = std::end( buffer );
-    do
-    {
-      -- d;
-      *d = "0123456789"[ tmp % 10 ];
+    char buffer[128];
+    char* d = std::end(buffer);
+    do {
+      --d;
+      *d = "0123456789"[tmp % 10];
       tmp /= 10;
-    } while ( tmp != 0 );
-    if ( value < 0 ) {
-      -- d;
+    } while (tmp != 0);
+    if (value < 0) {
+      --d;
       *d = '-';
     }
-    int len = std::end( buffer ) - d;
-    if ( dest.rdbuf()->sputn( d, len ) != len ) {
-      dest.setstate( std::ios_base::badbit );
+    int len = std::end(buffer) - d;
+    if (dest.rdbuf()->sputn(d, len) != len) {
+      dest.setstate(std::ios_base::badbit);
     }
   }
   return dest;
@@ -77,14 +90,13 @@ void testModMult64bits() {
   vA[0] = vecA[0];
   vB[0] = vecB[0];
   for (int idx = 1; idx < n; idx++) {
-    ZA[idx] = ZA[idx-1] + ZZ(1);
-    ZB[idx] = ZB[idx-1] + ZZ(1);
+    ZA[idx] = ZA[idx - 1] + ZZ(1);
+    ZB[idx] = ZB[idx - 1] + ZZ(1);
     vecA[idx] = vecA[idx - 1] + 1;
     vecB[idx] = vecB[idx - 1] + 1;
     vA[idx] = vecA[idx];
     vB[idx] = vecB[idx];
   }
-
 
   Timer t;
   for (int idx = 0; idx < n; idx++) {
@@ -98,32 +110,32 @@ void testModMult64bits() {
   }
   double slow = t.Tick("ZZ mult 64 bits");
 
-  cout << "asm/NTL: " << slow/fast << endl;
+  cout << "asm/NTL: " << slow / fast << endl;
 
   for (int idx = 0; idx < n; idx++) {
-    vC[idx] = vA[idx]*vB[idx] % mod64bit_;
+    vC[idx] = vA[idx] * vB[idx] % mod64bit_;
   }
   slow = t.Tick("c++ 64 bits");
-  cout << "asm/c++: " << slow/fast << endl;
+  cout << "asm/c++: " << slow / fast << endl;
 }
 
 void testModMult192bits() {
-  int n = 10485760;        
+  int n = 10485760;
   /*--------------------------25919----------------------------*/
-  vector<uint64_t> vecA(3*n, 0), vecB(3*n, 0), vecC(3*n, 0);
+  vector<uint64_t> vecA(3 * n, 0), vecB(3 * n, 0), vecC(3 * n, 0);
   vector<ZZ> ZA(n), ZB(n), ZC(n);
   ZZ mod192bit = (ZZ(1) << 192) - ZZ(933887);
   cout << mod192bit << endl;
   Timer t;
   for (int idx = 0; idx < n; idx++) {
-    ZA[idx] = ZZ(idx+1)*(ZZ(1) + (ZZ(1) << 64) + (ZZ(1)<<128));
-    ZB[idx] = ZZ(1)*(ZZ(1) + (ZZ(1) << 64) + (ZZ(1)<<128));
-    vecA[3*idx] = idx+1;
-    vecA[3*idx+1] = idx+1;
-    vecA[3*idx+2] = idx+1;
-    vecB[3*idx] = 1;
-    vecB[3*idx+1] = 1;
-    vecB[3*idx+2] = 1;
+    ZA[idx] = ZZ(idx + 1) * (ZZ(1) + (ZZ(1) << 64) + (ZZ(1) << 128));
+    ZB[idx] = ZZ(1) * (ZZ(1) + (ZZ(1) << 64) + (ZZ(1) << 128));
+    vecA[3 * idx] = idx + 1;
+    vecA[3 * idx + 1] = idx + 1;
+    vecA[3 * idx + 2] = idx + 1;
+    vecB[3 * idx] = 1;
+    vecB[3 * idx + 1] = 1;
+    vecB[3 * idx + 2] = 1;
   }
 
   t.Tick("convert");
@@ -134,19 +146,18 @@ void testModMult192bits() {
 
   t.Tick("Print");
   for (int idx = 0; idx < n; idx++) {
-//     cout << idx << endl;
-    uint64_t *X = vecA.data() + 3*idx;
-    uint64_t *Y = vecB.data() + 3*idx;
-    uint64_t *Z = vecC.data() + 3*idx;
+    //     cout << idx << endl;
+    uint64_t* X = vecA.data() + 3 * idx;
+    uint64_t* Y = vecB.data() + 3 * idx;
+    uint64_t* Z = vecC.data() + 3 * idx;
     asmMulModQ(Z, X, Y);
   }
   double fast = t.Tick("Fast mult 192 bits");
-  cout << "Gain: " << slow/fast << endl;
+  cout << "Gain: " << slow / fast << endl;
 
   for (int i = 0; i < n; i++) {
-    asmMulWithPModQ(vecC.data() + 3*i, vecA.data() + 3*i);
+    asmMulWithPModQ(vecC.data() + 3 * i, vecA.data() + 3 * i);
   }
   fast = t.Tick("Fast mult 192 bits with 64 bits");
-  cout << "Gain: " << slow/fast << endl;
+  cout << "Gain: " << slow / fast << endl;
 }
-
