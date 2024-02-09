@@ -1,6 +1,8 @@
-// g++ -O3 -msse -mavx generate_root_of_unity.cpp -lssl -lntl -lgmp -lpthread -std=c++11 -lcrypto -o generate_root_of_unity
+// g++ -O3 -msse -mavx generate_root_of_unity.cpp -lssl -lntl -lgmp -lpthread
+// -std=c++11 -lcrypto -o generate_root_of_unity
 
 #include <NTL/ZZ.h>
+
 #include <iostream>
 
 using namespace NTL;
@@ -33,13 +35,14 @@ NTL::ZZ RootOfUnityPlaintext(uint32_t two_phi_m) {
 
     ret = NTL::PowerMod(ret, exponent, modulo);
 
-    if (NTL::PowerMod(ret, two_phi_m/2, modulo) != one &&
-      NTL::PowerMod(ret, two_phi_m, modulo) == one) {
+    if (NTL::PowerMod(ret, two_phi_m / 2, modulo) != one &&
+        NTL::PowerMod(ret, two_phi_m, modulo) == one) {
       break;
     }
   }
 
-  std::cout << ret << " " << PowerMod(ret, 4096, modulo) << " " << PowerMod(ret, 4096*2, modulo) << std::endl;
+  std::cout << ret << " " << PowerMod(ret, 4096, modulo) << " "
+            << PowerMod(ret, 4096 * 2, modulo) << std::endl;
   return ret;
 }
 
@@ -60,8 +63,8 @@ NTL::ZZ RootOfUnityCiphertext(uint32_t two_phi_m) {
 
     ret = NTL::PowerMod(ret, exponent, modulo);
 
-    if (NTL::PowerMod(ret, two_phi_m/2, modulo) != one &&
-      NTL::PowerMod(ret, two_phi_m, modulo) == one) {
+    if (NTL::PowerMod(ret, two_phi_m / 2, modulo) != one &&
+        NTL::PowerMod(ret, two_phi_m, modulo) == one) {
       break;
     }
   }
@@ -70,8 +73,8 @@ NTL::ZZ RootOfUnityCiphertext(uint32_t two_phi_m) {
 }
 
 int main() {
-  auto p = RootOfUnityPlaintext(4096*2);
-  auto q = RootOfUnityCiphertext(4096*2);
+  auto p = RootOfUnityPlaintext(4096 * 2);
+  auto q = RootOfUnityCiphertext(4096 * 2);
   ZZToU3(q);
   cout << "RootOfUnityPlaintext : " << p << endl;
   cout << "RootOfUnityCiphertext: " << q << endl;

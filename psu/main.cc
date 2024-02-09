@@ -2,8 +2,8 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-#include "Machine.hpp"
-#include "MPC.hpp"
+#include "../network/Machine.hpp"
+#include "PSU.h"
 
 using namespace std;
 
@@ -22,17 +22,17 @@ int main(int argc, char** argv) {
 
 //   std::cout << totalParties << " " << machineId << " " << party << std::endl;
   
-  Machine * machine = new Machine(totalParties, 1, machineId, party);
+  Machine * machine = new Machine(totalParties, /*totalMachines=*/1, machineId, party);
   machine->connecting(peerBasePort, partyBasePort);
   
 //   cout << "Networking Done." << endl;
   
   usleep(5000);
   
-  MPC * mpc = new MPC(machineId, party, totalParties, itemLength, nBuckets, max_size, use_ot, machine, rate);
+  PSU * mpc = new PSU(machineId, party, totalParties, itemLength, nBuckets, max_size, use_ot, machine, rate);
   
   Timer tt;
-  mpc->MPCComputation(test);
+  mpc->PSUComputation(test);
   tt.Tick("GraphComputation()");
 
   delete machine;

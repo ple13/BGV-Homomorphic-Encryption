@@ -1,6 +1,8 @@
-// g++ -O3 -msse -mavx generate_primes.cpp -lssl -lntl -lgmp -lpthread -std=c++11 -lcrypto -o generate_primes
+// g++ -O3 -msse -mavx generate_primes.cpp -lssl -lntl -lgmp -lpthread
+// -std=c++11 -lcrypto -o generate_primes
 
 #include <NTL/ZZ.h>
+
 #include <iostream>
 
 using namespace NTL;
@@ -14,25 +16,24 @@ long witness(const ZZ& n, const ZZ& x) {
 
   // compute m, k such that n-1 = 2^k * m, m odd:
   k = 1;
-  m = n/2;
+  m = n / 2;
   while (m % 2 == 0) {
     k++;
     m /= 2;
   }
 
-  z = PowerMod(x, m, n); // z = x^m % n
+  z = PowerMod(x, m, n);  // z = x^m % n
   if (z == 1) return 0;
 
   j = 0;
   do {
     y = z;
-    z = (y*y) % n;
+    z = (y * y) % n;
     j++;
   } while (j < k && z != 1);
 
-  return z != 1 || y != n-1;
+  return z != 1 || y != n - 1;
 }
-
 
 long PrimeTest(const ZZ& n, long t) {
   if (n <= 1) return 0;
@@ -51,9 +52,8 @@ long PrimeTest(const ZZ& n, long t) {
   long i;
 
   for (i = 0; i < t; i++) {
-    x = RandomBnd(n); // random number between 0 and n-1
-    if (witness(n, x))
-      return 0;
+    x = RandomBnd(n);  // random number between 0 and n-1
+    if (witness(n, x)) return 0;
   }
 
   return 1;
@@ -66,12 +66,12 @@ ZZ genPrime(int logn, int bitlength) {
   ZZ n = ZZ(1 << (1 + logn));
 
   int count = 0;
-  while(1) {
+  while (1) {
     auto ret = RandomPrime_ZZ(bitlength);
     ret -= one;
     auto temp = RightShift(ret, logn + 1);
 
-    if (ret == temp*n) {
+    if (ret == temp * n) {
       return (ret + one);
     }
 
@@ -85,12 +85,12 @@ ZZ genPrime(int logn, int bitlength) {
 // p = 2^bitlength - k*2^(1+logn) + 1 (k >= 0)
 ZZ genMaxPrime(int logn, int bitlength) {
   ZZ one = ZZ(1);
-  ZZ n = ZZ(1 << (logn+1));
+  ZZ n = ZZ(1 << (logn + 1));
 
   ZZ current = (ZZ(1) << bitlength) + one;
   ZZ count = ZZ(0);
-  while(1) {
-    if(PrimeTest(current, 100)) {
+  while (1) {
+    if (PrimeTest(current, 100)) {
       cout << "k = " << count << endl;
       return current;
     } else {

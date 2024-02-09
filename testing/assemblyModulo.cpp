@@ -1,8 +1,3 @@
-// g++ -O3 -msse -msse2 -mavx assemblyModulo.cpp -lssl -lntl -lgmp -lpthread -std=c++11 -lcrypto ../fastMod.a -o assemblyModulo
-
-
-#include "Timer.h"
-#include "immintrin.h"
 #include <cassert>
 #include <cstdint>
 #include <array>
@@ -11,6 +6,9 @@
 #include <iostream>
 #include <random>
 #include <NTL/ZZ.h>
+
+#include "immintrin.h"
+#include "../utils/Timer.h"
 
 using namespace NTL;
 using namespace std;

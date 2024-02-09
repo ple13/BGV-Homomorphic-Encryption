@@ -28,7 +28,7 @@ public:
   ~IPManager(){}
 
   void loadIPs(int machines) {
-    ifstream file ("./machine_spec/" + to_string(machines) + ".txt");
+    ifstream file ("/home/lephi/BGV-Homomorphic-Encryption/network/machine_spec/" + to_string(machines) + ".txt");
     if( !file ) {
       cout << "Error opening input file" << endl ;
     }

@@ -7,11 +7,14 @@
 #include <openssl/rand.h>
 #include <vector>
 
+#define SEED_SIZE 32
+#define IV_SIZE 16
+
 class PRNG {
 public:
   PRNG() {
-    std::vector<unsigned char> seed(32);
-    std::vector<unsigned char> IV(16);
+    std::vector<unsigned char> seed(SEED_SIZE);
+    std::vector<unsigned char> IV(IV_SIZE);
 
     RAND_bytes(seed.data(), seed.size());
     RAND_bytes(IV.data(), IV.size());

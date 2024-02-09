@@ -1,5 +1,5 @@
-#ifndef MPC_H__
-#define MPC_H__
+#ifndef TRIPLE_H__
+#define TRIPLE_H__
 
 #pragma once
 #include <cstddef>
@@ -51,97 +51,113 @@ void printCiphertext(Ciphertext ct) {
   cout << endl;
 }
 
-class MPC {
+class Triple {
+public:
+  Triple(n) {
+    share_a.resize(n);
+    share_b.resize(n);
+    share_c.resize(n);
+    share_mac_a.resize(n);
+    share_mac_b.resize(n);
+    share_mac_c.resize(n);
+  }
+
+  vector<uint64_t> share_a;
+  vector<uint64_t> share_b;
+  vector<uint64_t> share_c;
+  vector<uint64_t> share_mac_a;
+  vector<uint64_t> share_mac_b;
+  vector<uint64_t> share_mac_c;
+
+  uint46_t share_mac_key;
+};
+
+class MpcOffline {
 public:
   int machineId;
   int party;
   int partner;
   int totalItems;
   int totalParties;
-  float rate;
 
-  int nBuckets;
-  int max_size;
-  int use_ot;
-  
   BGV bgv;
-  
+
   Machine *machine;
-  
-  MPC (int machineId, int party, int totalParties, int totalItems, int nBuckets, int max_size, int use_ot, Machine *machine, float rate) {
+
+  Ciphertext encryptedMacKey;
+
+  MpcOffline (int machineId, int party, int totalParties, int totalItems, Machine *machine) {
     this->totalParties = totalParties;
-    this->nBuckets = nBuckets;
-    this->max_size = max_size;
-    this->use_ot = use_ot;
     this->machineId = machineId;
     this->party = party;
     this->totalItems = totalItems;
     this->machine = machine;
-    this->rate = rate;
     bgv.init();
     bgv.keygen();
   }
-    
-  ~MPC(){
+
+  ~Triple(){
     delete machine;
   }
-  
-  void MPCComputation(int test) {
+
+  void TripleGeneration(int test) {
     int nItems = totalItems;
     Timer t;
-    
-    PSU_AHE(party, nItems,nBuckets, max_size, machine, use_ot);
-    if (party == 0) cout << "Communication (MBytes): " << machine->num_bytes_send/1024.0/1024.0 << "\t" << machine->num_bytes_recv/1024.0/1024.0 << "\t" << (machine->num_bytes_send + machine->num_bytes_recv)/1024.0/1024.0 << endl;
+
+    PSU_AHE(party, nItems, machine);
+    if (party == 0) {
+        cout << "Communication (MBytes): " << machine->num_bytes_send/1024.0/1024.0
+             << "\t" << machine->num_bytes_recv/1024.0/1024.0 << "\t"
+             << (machine->num_bytes_send + machine->num_bytes_recv)/1024.0/1024.0 << endl;
+    }
     t.Tick("PSU************************************");
   }
-  
-  int PSU_AHE(int party, int nItems, int nBuckets, int max_size, Machine *machine, int use_ot) {
+
+  void GetEncryptedMacKey(int party, Machine *machie)
+    // Each party sample a mac key and encrypts it
+    vector<uint64_t> partial_mac(bgv.n);
+    RAND_bytes((unsigned char *)partial_mac.data(), sizeof(uint46_t));
+    Ciphertext partiallyEncryptedMacKey = bgv.encrypt_with_pk(partial_mac);
+
+    if (party == 0) {
+        Ciphertext encryptedMacKey = partiallyEncryptedMacKey;
+        for (int i = 1; i < totalParties; i++) {
+            machine->receiveFromParty(0, i, partiallyEncryptedMacKey);
+            bgv.EvalAdd(encryptedMacKey, partiallyEncryptedMacKey);
+        }
+        for (int i = 1; i < totalParties; i++) {
+            machine->sendToParty(0, i, encryptedMacKey);
+        }
+    } else {
+        machine->sendToParty(party, 0, partiallyEncryptedMacKey);
+        machine->receiveFromParty(party, 0, encryptedMacKey);
+    }
+  }
+
+  int PSU_AHE(int party, int nItems, Machine *machine) {
     vector<uint64_t> input;
 
     int n = bgv.n;
-    int nrows = nBuckets/n;
-    int ncols = max_size;
-    
+    int nrows = nItems/n;
+
     Timer t;
-    
+
     if (party == 0) {
       machine->sendToParty(0, 1, bgv.pk);
 
       for (int i = 0; i < nItems; i++) {
         input.push_back(i+1);
       }
-      int maxSize = 0;
-      auto buckets = hashInput(input, nBuckets, "0xasdflafdlaf");
-      // Padding to max size.
-      // P0 also add 1 zeros at the end and shuffle the items in each bucket.
-      // P1 just need to pad to max size.
-      if (maxSize < max_size) {
-        maxSize = max_size;
-      }
 
-      cout << "(nrows, ncols, max bin): "
-           << nrows << " " << ncols << " " << maxSize << endl;
-
-      // Convert (X - x_i1)...(X - x_ik) to a_i0 + a_i1*X + ... + a_ik*X^k
-      map<int, vector<uint64_t>> polynomials;
-      for (int r = 0; r < nBuckets; r++) {
-        polynomials[r] = interpolate(buckets[r]);
-        polynomials[r].resize(maxSize, 0);
-      }
-
-      t.Tick("Interpolation");
-
-      vector<CompactedCiphertext> ciphertexts(nrows*ncols);
+      vector<Ciphertext> ciphertexts(nrows);
 
       vector<uint64_t> pt(n);
       for (int r = 0; r < nrows; r++) {
-        for (int c = 0; c < ncols; c++) {
           for (int i = 0; i < n; i++) {
-            pt[i] = polynomials[r*n + i][c];
+            pt[i] = input[r*n + i];
           }
           pt = bgv.helper->packed_encode(pt);
-          ciphertexts[r*ncols + c] = bgv.compact_encrypt_with_sk(pt);
-        }
+          ciphertexts[r] = bgv.encrypt_with_pk(pt);
       }
 
       t.Tick("Encryption");
@@ -352,38 +368,38 @@ public:
         machine->sendToParty(1, 0, (unsigned char *)m0.data(), 8*nBuckets*max_size);
       }
     }
-    
+
     return 0;
   }
-  
+
   void GenerateInput(int party, vector<uint64_t>& data, int nItems,
 		     float rate = 0.5) {
     if(party == Alice) {
       data.resize(nItems);
-      
+
       for(int i = 0; i < nItems; i++) {
         data[i] = i + 1;
       }
     } else if(party == Bob) {
       int intersectionSize;
-      
+
       if(rate <= 1) intersectionSize = nItems*rate; //rand() % (nItems);
       else intersectionSize = rate;
-      
+
       cout << "intersection size: " << intersectionSize << endl;
-      
+
       data.resize(nItems);
-      
+
       data[0] = 1;
       for(int i = 1; i < nItems; i++) {
         data[i] = (i + 1 + nItems - intersectionSize);
       }
     }
   }
-  
+
   void GenerateInput(int party, vector<uint64_t>& data, int nItems) {
     data.resize(nItems);
-    if(party == 0) {      
+    if(party == 0) {
       for(int i = 0; i < nItems; i++) {
 	data[i] = uint64_t(i + 1);
       }
@@ -400,7 +416,7 @@ public:
 
 
 
-  
+
 
 
 

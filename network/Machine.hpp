@@ -23,6 +23,7 @@
 #include "../PAHE/PAHE.h"
 #include "Network.hpp"
 #include "IPManager.hpp"
+#include <openssl/rand.h>
 
 #define MAX_PACKAGE_SIZE 1073741824
 
@@ -56,14 +57,14 @@ public:
   Machine(int totalMachines, int machineId, int party) {
     cout << "Machine (int totalMachines, int machineId, int party)" << endl;
     this->totalMachines = totalMachines;
-    this->totalParties = 2;
+    this->totalParties = totalParties;
     this->machineId = machineId;
     this->party = party;
-    this->numberOfIncomingParties = (this->totalParties - this->party - 1);
-    this->numberOfOutgoingParties = (this->party);
-    this->numberOfIncomingPeers = (this->totalMachines - this->machineId - 1);
-    this->numberOfOutgoingPeers = this->machineId;
-    layerBasePort = totalMachines * 2;
+    this->numberOfIncomingParties = this->totalParties - this->party - 1;
+    this->numberOfOutgoingParties = this->party;
+    this->numberOfIncomingPeers   = this->totalMachines - this->machineId - 1;
+    this->numberOfOutgoingPeers   = this->machineId;
+    layerBasePort = totalMachines * totalParties;
 
     partiesDown.resize(this->numberOfIncomingParties);
     partiesUp.resize(this->numberOfOutgoingParties);
@@ -80,10 +81,10 @@ public:
     this->totalParties = totalParties;
     this->machineId = machineId;
     this->party = party;
-    this->numberOfIncomingParties = (this->totalParties - this->party - 1);
+    this->numberOfIncomingParties = this->totalParties - this->party - 1;
     this->numberOfOutgoingParties = this->party;
-    this->numberOfIncomingPeers = (this->totalMachines - this->machineId - 1);
-    this->numberOfOutgoingPeers = this->machineId;
+    this->numberOfIncomingPeers   = this->totalMachines - this->machineId - 1;
+    this->numberOfOutgoingPeers   = this->machineId;
     layerBasePort = totalMachines * totalParties;
 
     partiesDown.resize(this->numberOfIncomingParties);
@@ -134,16 +135,28 @@ public:
     socklen_t clientSocksize = sizeof(clientSock);
 
     int server_fd, client_fd;
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) { perror("socket failed"); exit(1); }
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) { perror("setsockopt"); exit(1); } //| SO_REUSEPORT
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+      perror("socket failed");
+      exit(1);
+    }
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+      perror("setsockopt");
+      exit(1);
+    } //| SO_REUSEPORT
     memset(&serverSocket, 0, sizeof(serverSocket));
     serverSocket.sin_family = AF_INET;
     serverSocket.sin_addr.s_addr = htonl(INADDR_ANY); // set our address to any interface
     serverSocket.sin_port = htons(serverPort);        // set the server port number 
 
-    if (bind(server_fd, (struct sockaddr *)&serverSocket, sizeof(serverSocket)) < 0) { perror("error: bind"); exit(1); }
+    if (bind(server_fd, (struct sockaddr *)&serverSocket, sizeof(serverSocket)) < 0) {
+      perror("error: bind");
+      exit(1);
+    }
 
-    if (listen(server_fd, 15) < 0) { perror("error: listen"); exit(1); }
+    if (listen(server_fd, 15) < 0) {
+      perror("error: listen");
+      exit(1);
+    }
 
     FD_ZERO(&working_set); //clear the socket set 
     FD_SET(server_fd, &working_set); //add master socket to set
@@ -152,11 +165,21 @@ public:
       while(1) {
         activity = select(server_fd+1 , &working_set , NULL , NULL , NULL);   //&timeout
 
-        if ((activity < 0) && (errno!=EINTR))  { perror("select failed"); exit(1); }
+        if ((activity < 0) && (errno!=EINTR))  {
+          perror("select failed");
+          exit(1);
+        }
 
         if (FD_ISSET(server_fd, &working_set)) {
-          if ((client_fd = accept(server_fd, (struct sockaddr *)&clientSock, &clientSocksize)) < 0) { perror("error: accept"); exit(1); }
-          if (send(client_fd, msg, strlen(msg), 0) < 0) { perror("error: send"); exit(1); };
+          if ((client_fd = accept(server_fd, (struct sockaddr *)&clientSock, &clientSocksize)) < 0) {
+            perror("error: accept");
+            exit(1);
+          }
+          if (send(client_fd, msg, strlen(msg), 0) < 0) {
+            perror("error: send");
+            exit(1);
+          };
+
           Network * channel = new Network();
           channel->establishedChannel(client_fd);
 
@@ -172,7 +195,8 @@ public:
   }
 
 
-  void connectingClients(int myId, int serverPort, vector <Network *> &UpList, int numberOfOutgoingConnections, bool partyFlag) { 
+  void connectingClients(int myId, int serverPort, vector <Network *> &UpList,
+                         int numberOfOutgoingConnections, bool partyFlag) {
     IPManager * ipManager = new IPManager(totalMachines);
     string serverIp;
     int client_fd;
@@ -190,12 +214,17 @@ public:
       serverSocket.sin_family = AF_INET;
       serverSocket.sin_addr.s_addr = inet_addr(serverIp.c_str());
       serverSocket.sin_port = htons(serverPort + i);
-      if ((client_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == 0) { perror("socket failed"); exit(1); }
+      if ((client_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == 0) {
+        perror("socket failed");
+        exit(1);
+      }
 
       do {
         usleep(1000);
         if (connect(client_fd, (struct sockaddr *)&serverSocket, sizeof(serverSocket)) < 0) {
-          perror("connection failed"); close(client_fd); exit(1);
+          perror("connection failed");
+          close(client_fd);
+          exit(1);
         }
         accepted_flag = read(client_fd, buffer, 10);
       } while (accepted_flag < 0);
@@ -203,39 +232,77 @@ public:
       Network * channel = new Network();
       channel->establishedChannel(client_fd);
       UpList[i] = channel;
-      if (send(client_fd, &myId, sizeof(myId), 0) < 0) { perror("error: send"); exit(1); };
+      if (send(client_fd, &myId, sizeof(myId), 0) < 0) {
+        perror("error: send");
+        exit(1);
+      };
     }
   }
+
+  vector<unsigned char> generateCommonRandomBytes(int size) {
+    vector<unsigned char> bytes(size);
+    vector<unsigned char> common_randomness(size);
+    RAND_bytes(common_randomness.data(), common_randomness.size());
+    bytes = common_randomness;
+    // Receiver from lower party
+    for (int i = 0; i < party; i++) {
+      vector<unsigned char> buffer(size);
+      receiveFromParty(i, buffer.data(), buffer.size());
+      for (int j = 0; j < buffer.size(); j++) {
+        common_randomness[j] ^= buffer[j];
+      }
+    }
+
+    // Send to higher party
+    for (int i = party+1; i < totalParties; i++) {
+      sendToParty(i, bytes.data(), bytes.size());
+    }
+
+    // Send to lower party
+    for (int i = 0; i < party; i++) {
+      sendToParty(i, bytes.data(), bytes.size());
+    }
+
+    // Receiver from higher party
+    for (int i = party+1; i < totalParties; i++) {
+      vector<unsigned char> buffer(size);
+      receiveFromParty(i, buffer.data(), buffer.size());
+      for (int j = 0; j < buffer.size(); j++) {
+        common_randomness[j] ^= buffer[j];
+      }
+    }
+    return common_randomness;
+  }
   
-  void sendToParty(int src, int dest, std::vector<Ciphertext> ciphertexts) {
+  void sendToParty(int dst, std::vector<Ciphertext> ciphertexts) {
     for (int cdx = 0; cdx < ciphertexts.size(); cdx++) {
-      sendToParty(src, dest, ciphertexts[cdx]);
+      sendToParty(dst, ciphertexts[cdx]);
     }
   }
   
-  int receiveFromParty(int dest, int src, std::vector<Ciphertext>& ciphertexts) {
+  int receiveFromParty(int src, std::vector<Ciphertext>& ciphertexts) {
     int bytes = 0;
     for (int cdx = 0; cdx < ciphertexts.size(); cdx++) {
-      bytes += receiveFromParty(dest, src, ciphertexts[cdx]);
+      bytes += receiveFromParty(src, ciphertexts[cdx]);
     }
     return bytes;
   }
 
-  void sendToParty(int src, int dest, std::vector<CompactedCiphertext> ciphertexts) {
+  void sendToParty(int dst, std::vector<CompactedCiphertext> ciphertexts) {
     for (int cdx = 0; cdx < ciphertexts.size(); cdx++) {
-      sendToParty(src, dest, ciphertexts[cdx]);
+      sendToParty(dst, ciphertexts[cdx]);
     }
   }
 
-  int receiveFromParty(int dest, int src, std::vector<CompactedCiphertext>& ciphertexts) {
+  int receiveFromParty(int src, std::vector<CompactedCiphertext>& ciphertexts) {
     int bytes = 0;
     for (int cdx = 0; cdx < ciphertexts.size(); cdx++) {
-      bytes += receiveFromParty(dest, src, ciphertexts[cdx]);
+      bytes += receiveFromParty(src, ciphertexts[cdx]);
     }
     return bytes;
   }
   
-  void sendToParty(int src, int dest, Ciphertext ciphertext) {
+  void sendToParty(int dst, Ciphertext ciphertext) {
     std::vector<uint64_t> buffer;
     for (int i = 0; i < ciphertext.a.size(); i++) {
       buffer.insert(buffer.end(), ciphertext.a[i].begin(), ciphertext.a[i].end());
@@ -243,13 +310,13 @@ public:
     for (int i = 0; i < ciphertext.b.size(); i++) {
       buffer.insert(buffer.end(), ciphertext.b[i].begin(), ciphertext.b[i].end());
     }
-    sendToParty(src, dest, (unsigned char *)buffer.data(), sizeof(uint64_t)*buffer.size());
+    sendToParty(dst, (unsigned char *)buffer.data(), sizeof(uint64_t)*buffer.size());
   }
   
-  int receiveFromParty(int dest, int src, Ciphertext& ciphertext) {
+  int receiveFromParty(int src, Ciphertext& ciphertext) {
     int bytes = 0;
     std::vector<uint64_t> buffer(4096*2*3);
-    bytes += receiveFromParty(dest, src, (unsigned char *)buffer.data(),
+    bytes += receiveFromParty(src, (unsigned char *)buffer.data(),
                               sizeof(uint64_t)*buffer.size());
 
     ciphertext.a.resize(4096, std::vector<uint64_t>(3));
@@ -271,31 +338,29 @@ public:
     return bytes;
   }
 
-  void sendToParty(int src, int dest, CompactedCiphertext ciphertext) {
+  void sendToParty(int dst, CompactedCiphertext ciphertext) {
     std::vector<uint64_t> buffer;
     for (int i = 0; i < ciphertext.a.size(); i++) {
       buffer.insert(buffer.end(), ciphertext.a[i].begin(), ciphertext.a[i].end());
     }
     uint64_t *ptr = (uint64_t *)ciphertext.b.data();
     for (int i = 0; i < 2*SEED_SIZE/sizeof(uint64_t); i++) {
-      buffer.push_back(*ptr);
-      ptr++;
+      buffer.push_back(ptr[i]);
     }
-    sendToParty(src, dest, (unsigned char *)buffer.data(), sizeof(uint64_t)*buffer.size());
+    sendToParty(dst, (unsigned char *)buffer.data(), sizeof(uint64_t)*buffer.size());
   }
 
-  int receiveFromParty(int dest, int src, CompactedCiphertext& ciphertext) {
+  int receiveFromParty(int src, CompactedCiphertext& ciphertext) {
     int bytes = 0;
     std::vector<unsigned char> buffer(4096*sizeof(uint64_t)*3 + 2*SEED_SIZE);
-    bytes += receiveFromParty(dest, src, buffer.data(), buffer.size());
+    bytes += receiveFromParty(src, buffer.data(), buffer.size());
     uint64_t *ptr = (uint64_t *)buffer.data();
     ciphertext.a.resize(4096, std::vector<uint64_t>(3));
     ciphertext.b.resize(2*SEED_SIZE);
 
     for (int i = 0; i < 4096; i++) {
       for (int j = 0; j < 3; j++) {
-        ciphertext.a[i][j] = *ptr;
-        ptr++;
+        ciphertext.a[i][j] = ptr[3*i + j];
       }
     }
 
@@ -306,13 +371,14 @@ public:
     return bytes;
   }
 
-  void sendToParty(int party1, int party2, unsigned char *msg, uint64_t size) { 
-    // party1 sends to party2
+  void sendToParty(int dst, unsigned char *msg, uint64_t size) {
+    assert(party != dst);
+    // sends to dst
     Network * channel;
-    if (party1 < party2) {
-      channel = partiesDown[party2-party1-1];
-    } else if (party1 > party2) {
-      channel = partiesUp[party2];
+    if (party < dst) {
+      channel = partiesDown[dst-party-1];
+    } else {
+      channel = partiesUp[dst];
     }
     
     if(size > 1024*1024) std::cout << "sending " << size << " bytes" << std::endl;
@@ -344,14 +410,15 @@ public:
     num_bytes_send += size;
   }
 
-  int receiveFromParty(int party1, int party2, unsigned char *msg, uint64_t size) {
+  int receiveFromParty(int src, unsigned char *msg, uint64_t size) {
+    assert(party != src);
     if(size > 1024*1024) std::cout << "receiving " << size << " bytes" << std::endl;
-    // party1 receives from party2
+    // receives from src.
     Network * channel;
-    if (party1 < party2) {
-      channel = partiesDown[party2-party1-1];
-    } else if (party1 > party2) {
-      channel = partiesUp[party2];
+    if (party < src) {
+      channel = partiesDown[src-party-1];
+    } else {
+      channel = partiesUp[src];
     }
     int sd = channel->sock_fd;
     fd_set reading_set;

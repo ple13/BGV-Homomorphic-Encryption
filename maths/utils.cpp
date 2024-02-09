@@ -1,16 +1,20 @@
 #include "utils.h"
+
 #include <NTL/ZZ.h>
+
 #include <iostream>
 
 std::vector<uint64_t> mul(std::vector<uint64_t> u, uint64_t x) {
   uint64_t plaintext_modulus = 18446744073709436929ULL;
   std::vector<uint64_t> ret(u.size() + 1);
   ret[0] = ((unsigned __int128)x * (unsigned __int128)u[0]) % plaintext_modulus;
-  for (int i = 1; i < ret.size()-1; i++) {
-    ret[i] = ((unsigned __int128)x * (unsigned __int128)u[i]) % plaintext_modulus;
-    ret[i] = ((unsigned __int128)ret[i] + (unsigned __int128)u[i-1]) % plaintext_modulus;
+  for (int i = 1; i < ret.size() - 1; i++) {
+    ret[i] =
+        ((unsigned __int128)x * (unsigned __int128)u[i]) % plaintext_modulus;
+    ret[i] = ((unsigned __int128)ret[i] + (unsigned __int128)u[i - 1]) %
+             plaintext_modulus;
   }
-  ret[ret.size()-1] = 1;
+  ret[ret.size() - 1] = 1;
   return ret;
 }
 

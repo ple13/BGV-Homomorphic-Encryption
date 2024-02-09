@@ -1,6 +1,6 @@
 #include <iostream>
 #include "../PAHE/RandomGenerator.h"
-#include "Timer.h"
+#include "../utils/Timer.h"
 
 using namespace std;
 

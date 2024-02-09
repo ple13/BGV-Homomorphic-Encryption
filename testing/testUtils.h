@@ -1,5 +1,3 @@
-#include "Timer.h"
-#include "immintrin.h"
 #include <cassert>
 #include <cstdint>
 #include <array>
@@ -9,6 +7,8 @@
 #include <random>
 #include <NTL/ZZ.h>
 #include "testUtils.h"
+#include "immintrin.h"
+#include "../utils/Timer.h"
 
 void ZZToU3(ZZ val, uint64_t *u);
 ZZ U3ToZZ(vector<uint64_t> u);
