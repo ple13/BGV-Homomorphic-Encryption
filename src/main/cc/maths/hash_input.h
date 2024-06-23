@@ -12,13 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef UTILS_H_
-#define UTILS_H_
+#ifndef _SRC_MAIN_CC_MATHS_HASH_INPUT_
+#define _SRC_MAIN_CC_MATHS_HASH_INPUT_
 
+#include <NTL/ZZ.h>
+
+#include <cassert>
+#include <functional>
+#include <iomanip>
 #include <iostream>
+#include <map>
+#include <string>
 #include <vector>
 
-std::vector<uint64_t> interpolate(std::vector<uint64_t> roots);
-uint64_t invModP(uint64_t val);
+using namespace std;
 
-#endif
+map<int, vector<uint64_t>> hashInput(const vector<uint64_t>& input,
+                                     int nBuckets, const string seed);
+
+#endif  // _SRC_MAIN_CC_MATHS_HASH_INPUT_

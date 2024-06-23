@@ -1,0 +1,45 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+_INCLUDE_PREFIX = "/src/main"
+
+cc_library(
+    name = "generate_primes",
+    srcs = ["generate_primes.cc"],
+    linkopts = [
+        "-lntl",
+        "-lgmp",
+    ]
+)
+
+cc_library(
+    name = "generate_root_of_unity",
+    srcs = ["generate_root_of_unity.cc"],
+    linkopts = [
+        "-lntl",
+        "-lgmp",
+    ]
+)
+
+cc_library(
+    name = "hash_input",
+    srcs = ["hash_input.cc"],
+    hdrs = ["hash_input.h"],
+    strip_include_prefix = _INCLUDE_PREFIX,
+    linkopts = [
+        "-lntl",
+        "-lgmp",
+    ]
+)
+
+cc_library(
+    name = "polynomial_interpolation",
+    srcs = ["polynomial_interpolation.cc"],
+    hdrs = ["polynomial_interpolation.h"],
+    strip_include_prefix = _INCLUDE_PREFIX,
+    linkopts = [
+        "-lntl",
+        "-lgmp",
+    ]
+)

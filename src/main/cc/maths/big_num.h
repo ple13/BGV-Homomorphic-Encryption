@@ -12,22 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _HASH_INPUT__
-#define _HASH_INPUT__
+#ifndef _SRC_MAIN_CC_MATHS_BIG_NUM_H_
+#define _SRC_MAIN_CC_MATHS_BIG_NUM_H_
 
-#include <NTL/ZZ.h>
 
-#include <cassert>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
 
-using namespace std;
-
-map<int, vector<uint64_t>> hashInput(const vector<uint64_t>& input,
-                                     int nBuckets, const string seed);
-
-#endif
+#endif  // _SRC_MAIN_CC_MATHS_BIG_NUM_H_

@@ -19,11 +19,11 @@
 
 #include <iostream>
 
-using namespace NTL;
-using namespace std;
+namespace maths {
+namespace {
 
-long witness(const ZZ& n, const ZZ& x) {
-  ZZ m, y, z;
+long witness(const NTL::ZZ& n, const NTL::ZZ& x) {
+  NTL::ZZ m, y, z;
   long j, k;
 
   if (x == 0) return 0;
@@ -49,11 +49,11 @@ long witness(const ZZ& n, const ZZ& x) {
   return z != 1 || y != n - 1;
 }
 
-long PrimeTest(const ZZ& n, long t) {
+long PrimeTest(const NTL::ZZ& n, long t) {
   if (n <= 1) return 0;
 
   // first, perform trial division by primes up to 2000
-  PrimeSeq s;  // a class for quickly generating primes in sequence
+  NTL::PrimeSeq s;  // a class for quickly generating primes in sequence
   long p;
   p = s.next();  // first prime is always 2
   while (p && p < 2000) {
@@ -62,7 +62,7 @@ long PrimeTest(const ZZ& n, long t) {
   }
 
   // second, perform t Miller-Rabin tests
-  ZZ x;
+  NTL::ZZ x;
   long i;
 
   for (i = 0; i < t; i++) {
@@ -73,17 +73,19 @@ long PrimeTest(const ZZ& n, long t) {
   return 1;
 }
 
+}  // namespace
+
 // Generate a random prime p such that
 // p = 2^bitlength - k*2^(1+logn) + 1
-ZZ genPrime(int logn, int bitlength) {
-  ZZ one = ZZ(1);
-  ZZ n = ZZ(1 << (1 + logn));
+NTL::ZZ genPrime(int logn, int bitlength) {
+  NTL::ZZ one = NTL::ZZ(1);
+  NTL::ZZ n = NTL::ZZ(1 << (1 + logn));
 
   int count = 0;
   while (1) {
-    auto ret = RandomPrime_ZZ(bitlength);
+    auto ret = NTL::RandomPrime_ZZ(bitlength);
     ret -= one;
-    auto temp = RightShift(ret, logn + 1);
+    auto temp = NTL::RightShift(ret, logn + 1);
 
     if (ret == temp * n) {
       return (ret + one);
@@ -92,20 +94,20 @@ ZZ genPrime(int logn, int bitlength) {
     count++;
   }
 
-  return ZZ(0);
+  return NTL::ZZ(0);
 }
 
 // Generate the max prime p such that
 // p = 2^bitlength - k*2^(1+logn) + 1 (k >= 0)
-ZZ genMaxPrime(int logn, int bitlength) {
-  ZZ one = ZZ(1);
-  ZZ n = ZZ(1 << (logn + 1));
+NTL::ZZ genMaxPrime(int logn, int bitlength) {
+  NTL::ZZ one = NTL::ZZ(1);
+  NTL::ZZ n = NTL::ZZ(1 << (logn + 1));
 
-  ZZ current = (ZZ(1) << bitlength) + one;
-  ZZ count = ZZ(0);
+  NTL::ZZ current = (NTL::ZZ(1) << bitlength) + one;
+  NTL::ZZ count = NTL::ZZ(0);
   while (1) {
     if (PrimeTest(current, 100)) {
-      cout << "k = " << count << endl;
+      std::cout << "k = " << count << std::endl;
       return current;
     } else {
       current -= n;
@@ -116,20 +118,22 @@ ZZ genMaxPrime(int logn, int bitlength) {
   return current;
 }
 
-int main() {
-  auto p = genMaxPrime(12, 64);
-  auto q = genMaxPrime(12, 192);
+}  // namespace maths
 
-  cout << "plaintext modulus 64: " << p << endl;
-  cout << "ciphertext modulus 192: " << q << endl;
-  cout << "q % p: " << (q % p) << endl;
+int main() {
+  auto p = maths::genMaxPrime(12, 64);
+  auto q = maths::genMaxPrime(12, 192);
+
+  std::cout << "plaintext modulus 64: " << p << std::endl;
+  std::cout << "ciphertext modulus 192: " << q << std::endl;
+  std::cout << "q % p: " << (q % p) << std::endl;
 
   auto halfq = (q >> 1);
-  cout << "q/2: " << halfq << endl;
-  cout << hex << halfq % (ZZ(1) << 64) << endl;
+  std::cout << "q/2: " << halfq << std::endl;
+  std::cout << std::hex << halfq % (NTL::ZZ(1) << 64) << std::endl;
   halfq = (halfq >> 64);
-  cout << hex << halfq % (ZZ(1) << 64) << endl;
+  std::cout << std::hex << halfq % (NTL::ZZ(1) << 64) << std::endl;
   halfq = (halfq >> 64);
-  cout << hex << halfq % (ZZ(1) << 64) << endl;
+  std::cout << std::hex << halfq % (NTL::ZZ(1) << 64) << std::endl;
   return 0;
 }

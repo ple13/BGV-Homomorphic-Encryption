@@ -23,7 +23,7 @@ using namespace NTL;
 using namespace std;
 
 void ZZToU3(NTL::ZZ v) {
-  NTL::ZZ one = ZZ(1);
+  NTL::ZZ one = NTL::ZZ(1);
   std::cout << v << std::endl;
   std::cout << v % (one << 64) << std::endl;
   v = (v >> 64);
@@ -35,11 +35,11 @@ void ZZToU3(NTL::ZZ v) {
 NTL::ZZ RootOfUnityPlaintext(uint32_t two_phi_m) {
   NTL::ZZ zero = NTL::ZZ(0);
   NTL::ZZ one = NTL::ZZ(1);
-  SetSeed(one);
+  NTL::SetSeed(one);
   NTL::ZZ ret;
-  NTL::ZZ modulo = (one << 64) - ZZ(114687);
+  NTL::ZZ modulo = (one << 64) - NTL::ZZ(114687);
   NTL::ZZ temp = modulo - one;
-  NTL::ZZ exponent = RightShift(temp, log2(two_phi_m));
+  NTL::ZZ exponent = NTL::RightShift(temp, log2(two_phi_m));
 
   while (1) {
     NTL::RandomBnd(ret, modulo);
@@ -63,11 +63,11 @@ NTL::ZZ RootOfUnityPlaintext(uint32_t two_phi_m) {
 NTL::ZZ RootOfUnityCiphertext(uint32_t two_phi_m) {
   NTL::ZZ zero = NTL::ZZ(0);
   NTL::ZZ one = NTL::ZZ(1);
-  SetSeed(one);
+  NTL::SetSeed(one);
   NTL::ZZ ret;
-  NTL::ZZ modulo = (one << 192) - ZZ(933887);
+  NTL::ZZ modulo = (one << 192) - NTL::ZZ(933887);
   NTL::ZZ temp = modulo - one;
-  NTL::ZZ exponent = RightShift(temp, log2(two_phi_m));
+  NTL::ZZ exponent = NTL::RightShift(temp, log2(two_phi_m));
 
   while (1) {
     NTL::RandomBnd(ret, modulo);
@@ -96,8 +96,8 @@ int main() {
   NTL::ZZ one = NTL::ZZ(1);
   NTL::ZZ n = NTL::ZZ(4096);
 
-  NTL::ZZ ciphertextModulus = (one << 192) - ZZ(933887);
-  NTL::ZZ plaintextModulus = (one << 64) - ZZ(114687);
+  NTL::ZZ ciphertextModulus = (one << 192) - NTL::ZZ(933887);
+  NTL::ZZ plaintextModulus = (one << 64) - NTL::ZZ(114687);
 
   auto pinv = NTL::InvMod(p, plaintextModulus);
   auto qinv = NTL::InvMod(q, ciphertextModulus);

@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "HashInput.h"
+#include "hash_input.h"
 
 #include <NTL/ZZ.h>
 
 using namespace std;
 
-map<int, vector<uint64_t>> hashInput(const vector<uint64_t>& input,
-                                     int nBuckets, const string seed) {
-  hash<string> ptr_hash;
-  map<int, vector<uint64_t>> ret;
+map<int, std::vector<uint64_t>> hashInput(const std::vector<uint64_t>& input,
+                                          int nBuckets, const string seed) {
+  std::hash<string> ptr_hash;
+  std::map<int, std::vector<uint64_t>> ret;
   for (auto x : input) {
     auto str = seed + to_string(x);
     size_t index = ptr_hash(str);
