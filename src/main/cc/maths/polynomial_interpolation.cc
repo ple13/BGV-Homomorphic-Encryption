@@ -18,17 +18,31 @@
 
 #include <iostream>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "common_cpp/macros/macros.h"
+
 namespace maths {
 
-std::vector<uint64_t> mulMod(std::vector<uint64_t> u, uint64_t x,
-                             uint64_t plaintext_modulus) {
+absl::StatusOr<uint64_t> mulMod(uint64_t x, uint64_t y, uint64_t modulus) {
+  if (modulus < 2) {
+    return absl::InvalidArgumentError("Modulus must be greater than 1.");
+  }
+  if (x >= modulus || y >= modulus) {
+    return absl::InvalidArgumentError(
+        "Both multiplicand and multiplier must be less than modulus.");
+  }
+  return ((unsigned __int128)x * (unsigned __int128)y) % modulus;
+}
+
+absl::StatusOr<std::vector<uint64_t>> mulMod(std::vector<uint64_t> u,
+                                             uint64_t x,
+                                             uint64_t plaintext_modulus) {
   std::vector<uint64_t> ret(u.size() + 1);
-  ret[0] = ((unsigned __int128)x * (unsigned __int128)u[0]) % plaintext_modulus;
+  ASSIGN_OR_RETURN(ret[0], mulMod(u[0], x, plaintext_modulus));
   for (int i = 1; i < ret.size() - 1; i++) {
-    ret[i] =
-        ((unsigned __int128)x * (unsigned __int128)u[i]) % plaintext_modulus;
-    ret[i] = ((unsigned __int128)ret[i] + (unsigned __int128)u[i - 1]) %
-             plaintext_modulus;
+    ASSIGN_OR_RETURN(ret[i], mulMod(u[i], x, plaintext_modulus));
+    ASSIGN_OR_RETURN(ret[i], mulMod(ret[i], u[i - 1], plaintext_modulus));
   }
   ret[ret.size() - 1] = 1;
   return ret;
@@ -36,8 +50,8 @@ std::vector<uint64_t> mulMod(std::vector<uint64_t> u, uint64_t x,
 
 // Example modulus: 18446744073709436929ULL
 // P(x) = a_0 + ... + a_n*x^n
-std::vector<uint64_t> interpolate(std::vector<uint64_t> roots,
-                                  uint64_t plaintext_modulus) {
+absl::StatusOr<std::vector<uint64_t>> interpolate(std::vector<uint64_t> roots,
+                                                  uint64_t plaintext_modulus) {
   if (roots.empty()) {
     return std::vector<uint64_t>();
   }
@@ -49,7 +63,7 @@ std::vector<uint64_t> interpolate(std::vector<uint64_t> roots,
   // (c_0, ..., c_i)*(-r_i, 1)
   for (int i = 1; i < roots.size(); i++) {
     unsigned __int128 x = roots[i] > 0 ? plaintext_modulus - roots[i] : 0;
-    c = mulMod(c, x, plaintext_modulus);
+    ASSIGN_OR_RETURN(c, mulMod(c, x, plaintext_modulus));
   }
   return c;
 }

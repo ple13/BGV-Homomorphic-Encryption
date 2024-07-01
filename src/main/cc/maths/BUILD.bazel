@@ -2,7 +2,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-_INCLUDE_PREFIX = "/src/main"
+_INCLUDE_PREFIX = "/src/main/cc"
 
 cc_library(
     name = "generate_primes",
@@ -41,5 +41,10 @@ cc_library(
     linkopts = [
         "-lntl",
         "-lgmp",
-    ]
+    ],
+
+    deps = [
+        "@com_google_absl//absl/status:statusor",
+        "@wfa_common_cpp//src/main/cc/common_cpp/macros",
+    ],
 )
