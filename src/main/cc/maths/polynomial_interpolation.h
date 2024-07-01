@@ -18,7 +18,12 @@
 #include <iostream>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+
 namespace maths {
+
+absl::StatusOr<uint64_t> mulMod(uint64_t x, uint64_t y, uint64_t modulus);
 
 std::vector<uint64_t> interpolate(std::vector<uint64_t> roots);
 uint64_t invModP(uint64_t val);

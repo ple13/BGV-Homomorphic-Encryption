@@ -28,9 +28,15 @@ absl::StatusOr<uint64_t> mulMod(uint64_t x, uint64_t y, uint64_t modulus) {
   if (modulus < 2) {
     return absl::InvalidArgumentError("Modulus must be greater than 1.");
   }
-  if (x >= modulus || y >= modulus) {
+  if (x >= modulus && y >= modulus) {
     return absl::InvalidArgumentError(
         "Both multiplicand and multiplier must be less than modulus.");
+  } else if (x >= modulus) {
+    return absl::InvalidArgumentError(
+        "The multiplicand x must be less than modulus.");
+  } else if (y >= modulus) {
+    return absl::InvalidArgumentError(
+        "The multiplier y must be less than modulus.");
   }
   return ((unsigned __int128)x * (unsigned __int128)y) % modulus;
 }
