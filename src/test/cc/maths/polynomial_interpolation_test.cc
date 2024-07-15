@@ -57,8 +57,7 @@ TEST(MulMod, ValidInputSucceeds) {
   ASSERT_OK_AND_ASSIGN(uint64_t ret,
                        maths::mulMod(/*x=*/4, /*y=*/6, /*modulus=*/11));
   ASSERT_EQ(ret, 2);
-  ASSERT_OK_AND_ASSIGN(ret,
-                       maths::mulMod(/*x=*/4, /*y=*/0, /*modulus=*/11));
+  ASSERT_OK_AND_ASSIGN(ret, maths::mulMod(/*x=*/4, /*y=*/0, /*modulus=*/11));
   ASSERT_EQ(ret, 0);
 }
 

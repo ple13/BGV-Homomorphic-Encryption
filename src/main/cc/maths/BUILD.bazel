@@ -7,10 +7,12 @@ _INCLUDE_PREFIX = "/src/main/cc"
 cc_library(
     name = "generate_primes",
     srcs = ["generate_primes.cc"],
+    hdrs = ["generate_primes.h"],
     linkopts = [
         "-lntl",
         "-lgmp",
     ],
+    strip_include_prefix = _INCLUDE_PREFIX,
 )
 
 cc_library(

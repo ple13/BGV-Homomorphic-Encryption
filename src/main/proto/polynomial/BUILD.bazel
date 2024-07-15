@@ -1,0 +1,12 @@
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+package(default_visibility = ["//:__subpackages__"])
+
+IMPORT_PREFIX = "/src/main/proto"
+
+proto_library(
+    name = "polynomial_proto",
+    srcs = ["polynomial.proto"],
+    strip_import_prefix = "/src/main/proto",
+)

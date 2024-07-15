@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// g++ -O3 -msse -mavx generate_primes.cpp -lssl -lntl -lgmp -lpthread
-// -std=c++11 -lcrypto -o generate_primes
+#include "generate_primes.h"
 
 #include <NTL/ZZ.h>
-
-#include <iostream>
 
 namespace maths {
 namespace {
@@ -119,21 +116,3 @@ NTL::ZZ genMaxPrime(int logn, int bitlength) {
 }
 
 }  // namespace maths
-
-int main() {
-  auto p = maths::genMaxPrime(12, 64);
-  auto q = maths::genMaxPrime(12, 192);
-
-  std::cout << "plaintext modulus 64: " << p << std::endl;
-  std::cout << "ciphertext modulus 192: " << q << std::endl;
-  std::cout << "q % p: " << (q % p) << std::endl;
-
-  auto halfq = (q >> 1);
-  std::cout << "q/2: " << halfq << std::endl;
-  std::cout << std::hex << halfq % (NTL::ZZ(1) << 64) << std::endl;
-  halfq = (halfq >> 64);
-  std::cout << std::hex << halfq % (NTL::ZZ(1) << 64) << std::endl;
-  halfq = (halfq >> 64);
-  std::cout << std::hex << halfq % (NTL::ZZ(1) << 64) << std::endl;
-  return 0;
-}

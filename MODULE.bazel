@@ -1,5 +1,7 @@
 # MODULE.bazel
 
+BORINGSSL_VERSION = "0.0.0-20230215-5c22014"
+
 bazel_dep(
     name = "abseil-cpp",
     version = "20230802.1",
@@ -10,6 +12,11 @@ bazel_dep(
     name = "googletest",
     version = "1.14.0.bcr.1",
     repo_name = "com_google_googletest",
+)
+
+bazel_dep(
+    name = "boringssl",  # For shell-encryption.
+    version = BORINGSSL_VERSION,
 )
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
